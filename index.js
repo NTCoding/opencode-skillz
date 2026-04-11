@@ -61,10 +61,22 @@ function loadCommands() {
   return commands
 }
 
-function loadAgents() {
+function parseCsvList(value) {
+  if (!value || typeof value !== "string") return []
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function materializePreloadedTemplate(template) {
+  return template.replace(/\$ARGUMENTS/g, "all relevant current work in this session")
+}
+
+function loadAgents(commands) {
   const agentsDir = path.join(pluginRoot, "agents")
   const files = readMarkdownFiles(agentsDir)
-  const agents = {}
+  const rawAgents = {}
 
   for (const file of files) {
     const name = file.replace(/\.md$/, "")
@@ -72,8 +84,38 @@ function loadAgents() {
     const content = fs.readFileSync(fullPath, "utf8")
     const { meta, body } = extractFrontmatter(content)
 
+    rawAgents[name] = {
+      meta,
+      body: body.trim(),
+    }
+  }
+
+  const agents = {}
+
+  for (const [name, raw] of Object.entries(rawAgents)) {
+    const { meta, body } = raw
+    const promptParts = []
+
+    const parentAgentName = typeof meta.extends === "string" ? meta.extends.trim() : ""
+    if (parentAgentName && rawAgents[parentAgentName]) {
+      const parentPrompt = rawAgents[parentAgentName].body
+      if (parentPrompt) promptParts.push(parentPrompt)
+    }
+
+    if (body) {
+      promptParts.push(body)
+    }
+
+    const preloadedCommands = parseCsvList(meta.preload_commands)
+    for (const commandName of preloadedCommands) {
+      const command = commands[commandName]
+      if (!command || !command.template) continue
+      const rendered = materializePreloadedTemplate(command.template)
+      promptParts.push(`[Preloaded command /${commandName}]\n${rendered}`)
+    }
+
     const agent = {
-      prompt: body.trim(),
+      prompt: promptParts.join("\n\n").trim(),
     }
 
     if (meta.description) agent.description = meta.description
@@ -100,7 +142,7 @@ export const OpencodeSkillzPlugin = async () => {
         }
       }
 
-      const agents = loadAgents()
+      const agents = loadAgents(commands)
       for (const [name, agent] of Object.entries(agents)) {
         if (!config.agent[name]) {
           config.agent[name] = agent

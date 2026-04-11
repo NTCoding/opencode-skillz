@@ -7,7 +7,12 @@ Minimal OpenCode plugin that bundles:
 ## Included in v0.1.0
 
 - `/discuss` command (`commands/discuss.md`)
+- `/tdd-process` command (`commands/tdd-process.md`)
+- `/software-design` command (`commands/software-design.md`)
+- `/writing-tests` command (`commands/writing-tests.md`)
+- `/tactical-ddd` command (`commands/tactical-ddd.md`)
 - `default` agent (`agents/default.md`)
+- `tdd` agent (`agents/tdd.md`)
 
 ## Install
 
@@ -61,3 +66,9 @@ mode: subagent
 ---
 You are my custom agent prompt.
 ```
+
+## Notes
+
+- Skills are intentionally represented as commands in this plugin.
+- Commands are manually invoked unless guidance is embedded in an agent prompt.
+- The `tdd` agent preloads TDD, test-writing, software-design, and tactical-ddd disciplines via `preload_commands`.

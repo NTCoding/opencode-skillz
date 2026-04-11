@@ -12,6 +12,8 @@ Purpose: package OpenCode workflow assets as a plugin.
 
 - Keep command files process-oriented (not tone-oriented).
 - Put voice and persona behavior in agent prompts.
+- Treat reusable skill content as command templates in `commands/`.
+- Commands should be manually invoked by default.
 - Prefer minimal additions; only add new commands when needed.
 - Do not add `agent:` in command frontmatter unless the command must force a specific agent.
 
@@ -41,5 +43,7 @@ Supported keys in `agents/*.md`:
 - `mode` (optional)
 - `model` (optional)
 - `color` (optional)
+- `extends` (optional, agent name to prepend prompt from)
+- `preload_commands` (optional, comma-separated command names to embed in prompt)
 
 The markdown body becomes the command template or the agent prompt.
