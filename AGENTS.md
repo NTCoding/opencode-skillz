@@ -24,7 +24,6 @@ Purpose: package OpenCode workflow assets as a plugin.
 - Bump `minor` for new commands/agents or additive frontmatter support.
 - Bump `major` for behavioral breaks or removed/renamed commands/agents.
 - Every released version should have a git tag `vX.Y.Z`.
-- Keep `README.md` "Included in" section aligned with the current version.
 
 ## Frontmatter support
 

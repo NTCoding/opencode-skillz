@@ -1,6 +1,6 @@
 {
   "name": "opencode-skillz",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Bundled OpenCode commands and agents",
   "type": "module",
   "main": "index.js",
@@ -8,7 +8,6 @@
     "index.js",
     "commands",
     "agents",
-    "README.md",
     "AGENTS.md"
   ]
 }

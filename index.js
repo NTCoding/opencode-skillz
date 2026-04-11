@@ -149,6 +149,16 @@ export const OpencodeSkillzPlugin = async () => {
         }
       }
 
+      config.agent.build = {
+        ...(config.agent.build || {}),
+        disable: true,
+      }
+
+      config.agent.plan = {
+        ...(config.agent.plan || {}),
+        disable: true,
+      }
+
       if (!config.default_agent && config.agent.default) {
         config.default_agent = "default"
       }
