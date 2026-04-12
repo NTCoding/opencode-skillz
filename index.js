@@ -4,6 +4,11 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const pluginRoot = __dirname
+const commandNamespace = "nt-skillz"
+
+function buildCommandName(name) {
+  return `${commandNamespace}:${name}`
+}
 
 function extractFrontmatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
@@ -137,8 +142,9 @@ export const OpencodeSkillzPlugin = async () => {
 
       const commands = loadCommands()
       for (const [name, command] of Object.entries(commands)) {
-        if (!config.command[name]) {
-          config.command[name] = command
+        const commandName = buildCommandName(name)
+        if (!config.command[commandName]) {
+          config.command[commandName] = command
         }
       }
 
