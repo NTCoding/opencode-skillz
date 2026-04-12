@@ -15,7 +15,7 @@ Add the package name to the plugin list:
 }
 ```
 
-This is the simplest update path: bump version, push tag, and consumers get the new package version when they update config/package pinning.
+This is the simplest update path for consumers: declare the plugin once and keep your package pinning strategy up to date.
 
 ### Option B: local typed wrapper plugin file
 
@@ -27,16 +27,15 @@ import OpencodeSkillzPlugin from "opencode-skillz"
 export const OpencodeSkillzPluginAlias = OpencodeSkillzPlugin
 ```
 
-## Release
+## Publishing automation
 
-This repository publishes to npm via GitHub Actions when a tag `vX.Y.Z` is pushed.
+Publishing is fully automated with GitHub Actions.
 
-1. Bump version and create tag:
-
-```bash
-npm run release:patch
-```
-
-Or use `release:minor` / `release:major`.
-
-2. GitHub Actions workflow publishes to npm when the version tag is pushed.
+- The workflow runs on every push to `main`.
+- It determines the semantic version bump from the merged PR labels:
+  - `release:major` => `major`
+  - `release:minor` => `minor`
+  - no release label => `patch`
+- It updates `package.json` in CI with `npm version <bump> --no-git-tag-version`.
+- It publishes the new version to npm.
+- After publish succeeds, it commits the updated `package.json` back to `main` using a release commit with `[skip ci]` to prevent workflow loops.
