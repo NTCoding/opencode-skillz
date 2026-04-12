@@ -11,7 +11,7 @@ Add the package name to the plugin list:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-skillz"]
+  "plugin": ["@nt-ai-lab/opencode-skillz"]
 }
 ```
 
@@ -22,7 +22,7 @@ This is the simplest update path for consumers: declare the plugin once and keep
 If a consumer prefers local TypeScript wiring, create a file in `.opencode/plugins/`:
 
 ```ts
-import OpencodeSkillzPlugin from "opencode-skillz"
+import OpencodeSkillzPlugin from "@nt-ai-lab/opencode-skillz"
 
 export const OpencodeSkillzPluginAlias = OpencodeSkillzPlugin
 ```

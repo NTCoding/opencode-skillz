@@ -16,7 +16,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
-      id-token: write
 
     steps:
       - name: Check out repository
@@ -63,7 +62,7 @@ jobs:
         run: echo "value=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
 
       - name: Publish package
-        run: npm publish --access public --provenance
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
