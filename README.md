@@ -1,6 +1,6 @@
 # opencode-skillz
 
-Bundled OpenCode commands and agents published as an npm plugin package.
+Bundled OpenCode commands and agents published as an npm package for OpenCode plugins.
 
 ## Install
 
