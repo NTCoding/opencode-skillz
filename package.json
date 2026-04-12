@@ -1,13 +1,20 @@
 {
-  "name": "opencode-skillz",
+  "name": "@nt-ai-lab/opencode-skillz",
   "version": "0.2.0",
   "description": "Bundled OpenCode commands and agents",
   "type": "module",
   "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
   "files": [
     "index.js",
     "commands",
     "agents",
-    "AGENTS.md"
-  ]
+    "AGENTS.md",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

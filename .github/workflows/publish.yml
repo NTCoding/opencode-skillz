@@ -1,0 +1,79 @@
+name: Publish npm package
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: publish-main
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Determine version bump
+        id: bump
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let bump = "patch"
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+
+            try {
+              const prs = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+                owner,
+                repo,
+                commit_sha: context.sha,
+              })
+
+              if (prs.length > 0) {
+                const labels = prs[0].labels.map((label) => label.name)
+                if (labels.includes("release:major")) bump = "major"
+                else if (labels.includes("release:minor")) bump = "minor"
+              }
+            } catch (error) {
+              core.warning(`Failed to inspect PR labels for bump type. Defaulting to patch. ${error.message}`)
+            }
+
+            core.setOutput("bump", bump)
+
+      - name: Bump package version
+        run: npm version "${{ steps.bump.outputs.bump }}" --no-git-tag-version
+
+      - name: Read version
+        id: version
+        run: echo "value=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Publish package
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          if git diff --cached --quiet; then
+            echo "No package.json changes to commit"
+            exit 0
+          fi
+          git commit -m "chore(release): v${{ steps.version.outputs.value }} [skip ci]"
+          git push origin HEAD:main
