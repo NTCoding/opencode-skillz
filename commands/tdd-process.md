@@ -593,5 +593,6 @@ Test IS failing. Addressing what the error message demands...
     🚨 ALWAYS justify: does this address ONLY what error message demanded?
     🚨 NEVER change assertions to make tests pass
     🚨 NEVER guess - find evidence
+    🚨 NEVER stop unless you are blocked or have completed the full task. Do not stop at red and wait for the user's permission to transition to green. You are autonomous, just do it.
   </critical_reminders>
 </rules>
