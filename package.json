@@ -4,10 +4,22 @@
   "description": "Bundled OpenCode commands and agents",
   "type": "module",
   "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "scripts": {
+    "release:patch": "npm version patch && git push --follow-tags",
+    "release:minor": "npm version minor && git push --follow-tags",
+    "release:major": "npm version major && git push --follow-tags"
+  },
   "files": [
     "index.js",
     "commands",
     "agents",
-    "AGENTS.md"
-  ]
+    "AGENTS.md",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }
