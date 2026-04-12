@@ -59,7 +59,8 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "value=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+        run: |
+          node -e "const fs=require('node:fs'); const v=require('./package.json').version; fs.appendFileSync(process.env.GITHUB_OUTPUT, 'value=' + v + '\\n')"
 
       - name: Publish package
         run: npm publish --access public
