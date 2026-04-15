@@ -40,10 +40,15 @@ function readMarkdownFiles(dirPath) {
     .sort((a, b) => a.localeCompare(b))
 }
 
+function normalizeCommandReference(value) {
+  if (!value || typeof value !== "string") return ""
+  return value.trim().replace(/_/g, "-")
+}
+
 function loadCommands() {
   const commandsDir = path.join(pluginRoot, "commands")
   const files = readMarkdownFiles(commandsDir)
-  const commands = {}
+  const rawCommands = {}
 
   for (const file of files) {
     const name = file.replace(/\.md$/, "")
@@ -51,9 +56,47 @@ function loadCommands() {
     const content = fs.readFileSync(fullPath, "utf8")
     const { meta, body } = extractFrontmatter(content)
 
+    rawCommands[name] = {
+      meta,
+      body: body.trim(),
+    }
+  }
+
+  const commands = {}
+
+  function buildComposedTemplate(name, stack = new Set()) {
+    const rawCommand = rawCommands[name]
+    if (!rawCommand) return ""
+    if (stack.has(name)) return rawCommand.body
+
+    stack.add(name)
+
+    let template = rawCommand.body
+    const composeAfterName = normalizeCommandReference(rawCommand.meta.compose_after)
+    const composedCommand = rawCommands[composeAfterName]
+
+    if (composeAfterName && composedCommand) {
+      const composedTemplate = buildComposedTemplate(composeAfterName, stack)
+      if (composedTemplate) {
+        template = [
+          template,
+          `In addition you must adhere to the following:\n\n${composedTemplate}`,
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      }
+    }
+
+    stack.delete(name)
+
+    return template.trim()
+  }
+
+  for (const [name, rawCommand] of Object.entries(rawCommands)) {
+    const { meta } = rawCommand
     const command = {
       description: meta.description || `Run /${name}`,
-      template: body.trim(),
+      template: buildComposedTemplate(name),
     }
 
     if (meta.agent) command.agent = meta.agent

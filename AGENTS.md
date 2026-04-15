@@ -11,6 +11,7 @@ Purpose: package OpenCode workflow assets as a plugin.
 ## Conventions
 
 - Keep command files process-oriented (not tone-oriented).
+- Remove all personality from commands and skill content when creating them.
 - Put voice and persona behavior in agent prompts.
 - Treat reusable skill content as command templates in `commands/`.
 - Commands should be manually invoked by default.
