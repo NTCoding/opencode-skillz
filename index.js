@@ -97,6 +97,25 @@ function loadAgents(commands) {
 
   const agents = {}
 
+  function collectPreloadedCommands(agentName, stack = new Set()) {
+    const rawAgent = rawAgents[agentName]
+    if (!rawAgent) return []
+    if (stack.has(agentName)) return parseCsvList(rawAgent.meta.preload_commands)
+
+    stack.add(agentName)
+
+    const merged = []
+    const parentAgentName = typeof rawAgent.meta.extends === "string" ? rawAgent.meta.extends.trim() : ""
+    if (parentAgentName && rawAgents[parentAgentName]) {
+      merged.push(...collectPreloadedCommands(parentAgentName, stack))
+    }
+
+    merged.push(...parseCsvList(rawAgent.meta.preload_commands))
+    stack.delete(agentName)
+
+    return [...new Set(merged)]
+  }
+
   for (const [name, raw] of Object.entries(rawAgents)) {
     const { meta, body } = raw
     const promptParts = []
@@ -111,7 +130,7 @@ function loadAgents(commands) {
       promptParts.push(body)
     }
 
-    const preloadedCommands = parseCsvList(meta.preload_commands)
+    const preloadedCommands = collectPreloadedCommands(name)
     for (const commandName of preloadedCommands) {
       const command = commands[commandName]
       if (!command || !command.template) continue
