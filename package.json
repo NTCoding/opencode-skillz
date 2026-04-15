@@ -1,6 +1,6 @@
 {
   "name": "@nt-ai-lab/opencode-skillz",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Bundled OpenCode commands and agents",
   "type": "module",
   "main": "index.js",
