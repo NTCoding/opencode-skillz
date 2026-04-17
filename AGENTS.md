@@ -15,6 +15,7 @@ Purpose: package OpenCode workflow assets as a plugin.
 - Put voice and persona behavior in agent prompts.
 - Treat reusable skill content as command templates in `commands/`.
 - Commands should be manually invoked by default.
+- All plugin-provided commands must use the `nt-skillz:` prefix, including code-backed commands.
 - Prefer minimal additions; only add new commands when needed.
 - Do not add `agent:` in command frontmatter unless the command must force a specific agent.
 

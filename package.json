@@ -1,19 +1,30 @@
 {
   "name": "@nt-ai-lab/opencode-skillz",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "description": "Bundled OpenCode commands and agents",
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
   },
   "files": [
-    "index.js",
+    "dist",
     "commands",
     "agents",
     "AGENTS.md",
     "README.md"
   ],
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "typescript": "^5.9.3"
+  },
   "publishConfig": {
     "access": "public"
   }
