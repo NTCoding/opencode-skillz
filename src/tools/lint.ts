@@ -20,7 +20,7 @@ class GitCommandError extends Error {
   }
 }
 
-class MissingLocalDependencyError extends Error {
+class MissingBundledLintAssetError extends Error {
   constructor(message: string) {
     super(message)
   }
@@ -53,7 +53,6 @@ interface PortableLintCommandLine {
 
 const toolDirectory = path.dirname(fileURLToPath(import.meta.url))
 const toolRepositoryRoot = path.resolve(toolDirectory, "..", "..")
-const eslintCliPath = path.join(toolRepositoryRoot, "node_modules", "eslint", "bin", "eslint.js")
 const eslintConfigPath = path.join(toolRepositoryRoot, "scripts", "living-architecture-eslint.config.mjs")
 const gitBinaryPath = "/usr/bin/git"
 
@@ -101,13 +100,13 @@ function normalizeFilePaths(filePaths: string[] | undefined): string[] {
   return normalizedFilePaths
 }
 
-function ensureLocalDependencies(): void {
-  if (fs.existsSync(eslintCliPath)) {
+function ensureBundledLintAssetsExist(): void {
+  if (fs.existsSync(eslintConfigPath)) {
     return
   }
 
-  throw new MissingLocalDependencyError(
-    `Expected ESLint dependencies to be installed in ${toolRepositoryRoot}.`,
+  throw new MissingBundledLintAssetError(
+    `Expected bundled lint config to exist at ${eslintConfigPath}.`,
   )
 }
 
@@ -255,7 +254,7 @@ function parsePortableLintCommandLine(commandLineArguments: string[]): PortableL
 }
 
 export async function runPortableLint(request: PortableLintRequest): Promise<PortableLintOutcome> {
-  ensureLocalDependencies()
+  ensureBundledLintAssetsExist()
 
   const repositoryRoot = resolveDirectory(request.repositoryRoot ?? process.cwd())
   const baseReference = normalizeOptionalText(request.base)
