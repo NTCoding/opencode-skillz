@@ -1,129 +1,290 @@
-import { spawn } from "node:child_process"
+import fs from "node:fs"
+import path from "node:path"
+import process from "node:process"
+import { spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
+import { parseArgs } from "node:util"
 
-import {
-  tool,
-  type ToolContext,
-} from "@opencode-ai/plugin"
+import { ESLint } from "eslint"
+import { tool } from "@opencode-ai/plugin"
 
-class InvalidLintRequestError extends Error {
+class UsageError extends Error {
   constructor(message: string) {
     super(message)
   }
 }
 
-class LintRunFailedError extends Error {
+class GitCommandError extends Error {
   constructor(message: string) {
     super(message)
   }
 }
 
-interface LintRequest {
+class MissingLocalDependencyError extends Error {
+  constructor(message: string) {
+    super(message)
+  }
+}
+
+class LintExecutionError extends Error {
+  constructor(message: string) {
+    super(message)
+  }
+}
+
+interface PortableLintRequest {
+  repositoryRoot?: string
   files?: string[]
   base?: string
   head?: string
 }
 
-interface LintRunOutcome {
+interface PortableLintOutcome {
   exitCode: number
   output: string
 }
 
-const lintScriptPath = fileURLToPath(new URL("../../scripts/lint-ts.mjs", import.meta.url))
+interface PortableLintCommandLine {
+  repositoryRoot: string
+  files: string[]
+  base: string | undefined
+  head: string | undefined
+}
+
+const toolDirectory = path.dirname(fileURLToPath(import.meta.url))
+const toolRepositoryRoot = path.resolve(toolDirectory, "..", "..")
+const eslintCliPath = path.join(toolRepositoryRoot, "node_modules", "eslint", "bin", "eslint.js")
+const eslintConfigPath = path.join(toolRepositoryRoot, "scripts", "living-architecture-eslint.config.mjs")
+const gitBinaryPath = "/usr/bin/git"
 
 export const LINT_TOOL_NAME = "nt_skillz_lint"
 
-function validateLintRequest(request: LintRequest): void {
-  if (request.base && request.files?.length) {
-    throw new InvalidLintRequestError("Expected either file paths or base reference. Got both.")
+function normalizeOptionalText(value: string | undefined): string | undefined {
+  if (typeof value !== "string") {
+    return undefined
   }
 
-  if (!request.base && request.head) {
-    throw new InvalidLintRequestError("Expected head reference to be used together with base reference.")
+  const trimmedValue = value.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  return trimmedValue
+}
+
+function resolveDirectory(directoryPath: string): string {
+  const absoluteDirectoryPath = path.resolve(directoryPath)
+
+  if (!fs.existsSync(absoluteDirectoryPath)) {
+    throw new UsageError(`Expected repository path to exist. Got ${absoluteDirectoryPath}.`)
+  }
+
+  if (!fs.statSync(absoluteDirectoryPath).isDirectory()) {
+    throw new UsageError(`Expected repository path to be a directory. Got ${absoluteDirectoryPath}.`)
+  }
+
+  return absoluteDirectoryPath
+}
+
+function ensureSupportedFilePath(filePath: string): void {
+  if (filePath.endsWith(".ts") || filePath.endsWith(".tsx")) {
+    return
+  }
+
+  throw new UsageError(`Expected a TypeScript file path ending in .ts or .tsx. Got ${filePath}.`)
+}
+
+function normalizeFilePaths(filePaths: string[] | undefined): string[] {
+  const normalizedFilePaths = (filePaths ?? []).map((filePath) => filePath.trim()).filter(Boolean)
+  normalizedFilePaths.forEach(ensureSupportedFilePath)
+  return normalizedFilePaths
+}
+
+function ensureLocalDependencies(): void {
+  if (fs.existsSync(eslintCliPath)) {
+    return
+  }
+
+  throw new MissingLocalDependencyError(
+    `Expected ESLint dependencies to be installed in ${toolRepositoryRoot}.`,
+  )
+}
+
+function runGitCommand(repositoryRoot: string, gitArguments: string[]): string {
+  const gitResult = spawnSync(gitBinaryPath, ["-C", repositoryRoot, ...gitArguments], { encoding: "utf8" })
+
+  if (gitResult.error) {
+    throw new GitCommandError(`Expected git command to run. Got ${gitResult.error.message}.`)
+  }
+
+  if (gitResult.status === 0) {
+    return gitResult.stdout
+  }
+
+  const errorOutput = gitResult.stderr.trim() || gitResult.stdout.trim() || "git command failed"
+  throw new GitCommandError(`Expected git command to succeed. Got ${errorOutput}.`)
+}
+
+function readChangedTypeScriptFiles(repositoryRoot: string, baseReference: string, headReference: string): string[] {
+  const diffRange = `${baseReference}...${headReference}`
+  const output = runGitCommand(repositoryRoot, [
+    "diff",
+    "--name-only",
+    "--diff-filter=ACMR",
+    diffRange,
+    "--",
+    "*.ts",
+    "*.tsx",
+  ])
+
+  return output.split("\n").filter(Boolean)
+}
+
+function readTrackedAndUntrackedTypeScriptFiles(repositoryRoot: string): string[] {
+  const output = runGitCommand(repositoryRoot, [
+    "ls-files",
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "--",
+    "*.ts",
+    "*.tsx",
+  ])
+
+  return output.split("\n").filter(Boolean)
+}
+
+function ensureValidLintRequest(baseReference: string | undefined, headReference: string | undefined, filePaths: string[]): void {
+  if (baseReference && filePaths.length > 0) {
+    throw new UsageError("Expected either file paths or base reference. Got both.")
+  }
+
+  if (!baseReference && headReference) {
+    throw new UsageError("Expected head reference to be used together with base reference.")
   }
 }
 
-function createLintCommandArguments(request: LintRequest): string[] {
-  const commandArguments = [lintScriptPath]
-
-  if (request.base) {
-    commandArguments.push("--base", request.base)
-
-    if (request.head) {
-      commandArguments.push("--head", request.head)
-    }
+function resolveLintTargets(repositoryRoot: string, baseReference: string | undefined, headReference: string | undefined, filePaths: string[]): string[] {
+  if (filePaths.length > 0) {
+    return filePaths
   }
 
-  for (const filePath of request.files ?? []) {
-    commandArguments.push(filePath)
+  if (baseReference) {
+    return readChangedTypeScriptFiles(repositoryRoot, baseReference, headReference ?? "HEAD")
   }
 
-  return commandArguments
+  return readTrackedAndUntrackedTypeScriptFiles(repositoryRoot)
 }
 
-function createLintTitle(request: LintRequest): string {
-  if (request.files?.length) {
-    return `Lint ${request.files.length} TypeScript file(s)`
+function createLintTitle(filePaths: string[], baseReference: string | undefined): string {
+  if (filePaths.length > 0) {
+    return `Lint ${filePaths.length} TypeScript file(s)`
   }
 
-  if (request.base) {
-    return `Lint TypeScript changes from ${request.base}`
+  if (baseReference) {
+    return `Lint TypeScript changes from ${baseReference}`
   }
 
   return "Lint current TypeScript files"
 }
 
-function createLintOutput(standardOutputParts: string[], standardErrorParts: string[]): string {
-  const sections = [standardOutputParts.join("").trim(), standardErrorParts.join("").trim()].filter(Boolean)
-  return sections.join("\n")
-}
+async function runEslint(repositoryRoot: string, lintTargets: string[]): Promise<PortableLintOutcome> {
+  const previousLintRepositoryRoot = process.env.NT_SKILLZ_LINT_REPO_ROOT
+  process.env.NT_SKILLZ_LINT_REPO_ROOT = repositoryRoot
 
-function normalizeExitCode(value: number | null): number {
-  if (typeof value === "number") {
-    return value
-  }
-
-  return 1
-}
-
-function runLintCommand(request: LintRequest, context: ToolContext): Promise<LintRunOutcome> {
-  return new Promise((resolve, reject) => {
-    const lintCommand = spawn(process.execPath, createLintCommandArguments(request), {
-      cwd: context.worktree,
-      signal: context.abort,
-      stdio: ["ignore", "pipe", "pipe"],
-    })
-
-    const standardOutputParts: string[] = []
-    const standardErrorParts: string[] = []
-
-    lintCommand.stdout.on("data", (chunk: Buffer | string) => {
-      standardOutputParts.push(chunk.toString())
-    })
-
-    lintCommand.stderr.on("data", (chunk: Buffer | string) => {
-      standardErrorParts.push(chunk.toString())
-    })
-
-    lintCommand.on("error", (error) => {
-      reject(error)
-    })
-
-    lintCommand.on("close", (exitCode) => {
-      resolve({
-        exitCode: normalizeExitCode(exitCode),
-        output: createLintOutput(standardOutputParts, standardErrorParts),
-      })
-    })
+  const eslint = new ESLint({
+    cwd: repositoryRoot,
+    errorOnUnmatchedPattern: false,
+    overrideConfigFile: eslintConfigPath,
+    warnIgnored: false,
   })
+
+  try {
+    const lintResults = await eslint.lintFiles(lintTargets)
+    const formatter = await eslint.loadFormatter("stylish")
+    const formattedOutput = (await formatter.format(lintResults)).trim()
+    const errorCount = lintResults.reduce((count, lintResult) => count + lintResult.errorCount + lintResult.fatalErrorCount, 0)
+
+    return {
+      exitCode: errorCount > 0 ? 1 : 0,
+      output: formattedOutput,
+    }
+  } finally {
+    if (previousLintRepositoryRoot) {
+      process.env.NT_SKILLZ_LINT_REPO_ROOT = previousLintRepositoryRoot
+    } else {
+      delete process.env.NT_SKILLZ_LINT_REPO_ROOT
+    }
+  }
 }
 
-function createLintFailureMessage(outcome: LintRunOutcome): string {
-  if (outcome.output) {
-    return outcome.output
+function parsePortableLintCommandLine(commandLineArguments: string[]): PortableLintCommandLine {
+  const parsedArguments = parseArgs({
+    args: commandLineArguments,
+    options: {
+      repo: { type: "string" },
+      base: { type: "string" },
+      head: { type: "string" },
+      help: {
+        type: "boolean",
+        short: "h",
+      },
+    },
+    allowPositionals: true,
+  })
+
+  if (parsedArguments.values.help) {
+    process.stdout.write([
+      "Usage: ./scripts/lint-ts.sh [--repo PATH] [--base REF] [--head REF] [file ...]",
+      "",
+      "Examples:",
+      "  ./scripts/lint-ts.sh --repo ../living-architecture --base origin/main",
+      "  ./scripts/lint-ts.sh --repo ../living-architecture packages/example/src/example.ts",
+      "  ./scripts/lint-ts.sh src/example.ts",
+    ].join("\n") + "\n")
+    process.exit(0)
   }
 
-  return `Lint failed with exit code ${outcome.exitCode}.`
+  return {
+    repositoryRoot: resolveDirectory(parsedArguments.values.repo ?? process.cwd()),
+    files: normalizeFilePaths(parsedArguments.positionals),
+    base: normalizeOptionalText(parsedArguments.values.base),
+    head: normalizeOptionalText(parsedArguments.values.head),
+  }
+}
+
+export async function runPortableLint(request: PortableLintRequest): Promise<PortableLintOutcome> {
+  ensureLocalDependencies()
+
+  const repositoryRoot = resolveDirectory(request.repositoryRoot ?? process.cwd())
+  const baseReference = normalizeOptionalText(request.base)
+  const headReference = normalizeOptionalText(request.head)
+  const filePaths = normalizeFilePaths(request.files)
+
+  ensureValidLintRequest(baseReference, headReference, filePaths)
+
+  const lintTargets = resolveLintTargets(repositoryRoot, baseReference, headReference, filePaths)
+
+  if (lintTargets.length === 0) {
+    return {
+      exitCode: 0,
+      output: "No TypeScript files matched.",
+    }
+  }
+
+  return runEslint(repositoryRoot, lintTargets)
+}
+
+export async function runPortableLintFromCommandLine(commandLineArguments: string[]): Promise<number> {
+  const request = parsePortableLintCommandLine(commandLineArguments)
+  const outcome = await runPortableLint(request)
+
+  if (outcome.output) {
+    process.stdout.write(`${outcome.output}\n`)
+  }
+
+  return outcome.exitCode
 }
 
 export const lintTool = tool({
@@ -134,21 +295,30 @@ export const lintTool = tool({
     head: tool.schema.string().optional().describe("Optional head git reference used with base."),
   },
   async execute(request, context) {
-    validateLintRequest(request)
-    context.metadata({ title: createLintTitle(request) })
+    const filePaths = normalizeFilePaths(request.files)
+    const baseReference = normalizeOptionalText(request.base)
+    const headReference = normalizeOptionalText(request.head)
 
-    const outcome = await runLintCommand(request, context)
+    ensureValidLintRequest(baseReference, headReference, filePaths)
+    context.metadata({ title: createLintTitle(filePaths, baseReference) })
+
+    const outcome = await runPortableLint({
+      repositoryRoot: context.worktree,
+      files: filePaths,
+      base: baseReference,
+      head: headReference,
+    })
 
     if (outcome.exitCode !== 0) {
-      throw new LintRunFailedError(createLintFailureMessage(outcome))
+      throw new LintExecutionError(outcome.output || "Lint failed.")
     }
 
     return {
       output: outcome.output || "Lint passed.",
       metadata: {
-        base: request.base ?? null,
-        fileCount: request.files?.length ?? 0,
-        head: request.head ?? null,
+        base: baseReference ?? null,
+        fileCount: filePaths.length,
+        head: headReference ?? null,
       },
     }
   },
