@@ -10,8 +10,9 @@ Implement the required task to the highest standards possible. Do not take short
 
 ## Linting
 
-After each small TypeScript code change, call `nt_skillz_lint` for the changed `.ts` or `.tsx` file or files.
+After each small TypeScript code change, call `nt_skillz_lint` with only the `files` argument for the changed `.ts` or `.tsx` file or files from that step.
 
+- do not pass `base` or `head` during normal implementation work
 - all lint errors on new code must be addressed before continuing
 - if the lint fails on existing code, ignore the error unless it is very close to the new code
 - line-length limits do not count as existing code; if new code causes a file-length lint error, it must be fixed
