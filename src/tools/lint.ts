@@ -51,6 +51,8 @@ interface PortableLintCommandLine {
   head: string | undefined
 }
 
+const ansiEscapeSequencePattern = new RegExp(String.raw`\u001B\[[0-?]*[ -/]*[@-~]`, "g")
+
 const toolDirectory = path.dirname(fileURLToPath(import.meta.url))
 const toolRepositoryRoot = path.resolve(toolDirectory, "..", "..")
 const eslintConfigPath = path.join(toolRepositoryRoot, "scripts", "living-architecture-eslint.config.mjs")
@@ -188,6 +190,10 @@ function createLintTitle(filePaths: string[], baseReference: string | undefined)
   return "Lint current TypeScript files"
 }
 
+function removeAnsiEscapeSequences(value: string): string {
+  return value.replaceAll(ansiEscapeSequencePattern, "")
+}
+
 async function runEslint(repositoryRoot: string, lintTargets: string[]): Promise<PortableLintOutcome> {
   const previousLintRepositoryRoot = process.env.NT_SKILLZ_LINT_REPO_ROOT
   process.env.NT_SKILLZ_LINT_REPO_ROOT = repositoryRoot
@@ -202,7 +208,7 @@ async function runEslint(repositoryRoot: string, lintTargets: string[]): Promise
   try {
     const lintResults = await eslint.lintFiles(lintTargets)
     const formatter = await eslint.loadFormatter("stylish")
-    const formattedOutput = (await formatter.format(lintResults)).trim()
+    const formattedOutput = removeAnsiEscapeSequences((await formatter.format(lintResults)).trim())
     const errorCount = lintResults.reduce((count, lintResult) => count + lintResult.errorCount + lintResult.fatalErrorCount, 0)
 
     return {

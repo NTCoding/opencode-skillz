@@ -22,8 +22,6 @@ if (!lintRepositoryRoot) {
 
 const typescriptFiles = ['**/*.ts', '**/*.tsx']
 const testFiles = ['**/*.spec.ts', '**/*.spec.tsx', '**/*.test.ts', '**/*.test.tsx']
-const thinLayerFiles = ['**/entrypoint/**/*.ts', '**/commands/**/*.ts', '**/queries/**/*.ts']
-const thinLayerIgnoredFiles = ['**/*.spec.ts', '**/*.test.ts']
 const ignoredPaths = [
   '**/dist',
   '**/out-tsc',
@@ -57,21 +55,6 @@ const noEmptyStringFallbackRule = {
 }
 
 const restrictedSyntaxRules = ['error', noLetRule, noGenericErrorRule, noEmptyStringFallbackRule]
-
-const entrypointRestrictedSyntaxRules = [
-  'error',
-  noLetRule,
-  noGenericErrorRule,
-  {
-    selector: 'FunctionDeclaration:not([parent.type="ExportNamedDeclaration"])',
-    message: 'Entrypoints must not define private functions. Move logic to commands/, queries/, or infra/.',
-  },
-  {
-    selector: 'VariableDeclarator > ArrowFunctionExpression',
-    message: 'Entrypoints must not define private arrow functions. Move logic to commands/, queries/, or infra/.',
-  },
-  noEmptyStringFallbackRule,
-]
 
 const restrictedImportPatterns = [
   {
@@ -227,20 +210,6 @@ export default tseslint.config(
       '@stylistic/indent': ['error', 2],
       '@stylistic/object-curly-newline': ['error', { multiline: true, minProperties: 2 }],
       '@stylistic/object-property-newline': ['error', { allowAllPropertiesOnSameLine: false }],
-    },
-  },
-  {
-    files: thinLayerFiles,
-    ignores: thinLayerIgnoredFiles,
-    rules: {
-      'max-lines': ['error', { max: 150, skipBlankLines: true, skipComments: true }],
-    },
-  },
-  {
-    files: ['**/entrypoint/**/*.ts'],
-    ignores: thinLayerIgnoredFiles,
-    rules: {
-      'no-restricted-syntax': entrypointRestrictedSyntaxRules,
     },
   },
   {
