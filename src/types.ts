@@ -1,3 +1,5 @@
+import type { ToolDefinition } from "@opencode-ai/plugin"
+
 export interface CommandDefinition {
   description?: string
   template: string
@@ -27,17 +29,11 @@ export interface CommandExecuteBeforeInput {
   arguments: string
 }
 
-export interface CommandExecuteBeforeOutput {
-  parts: unknown[]
-}
+export interface CommandExecuteBeforeOutput { parts: unknown[] }
 
-export interface ChatSystemTransformInput {
-  sessionID?: string
-}
+export interface ChatSystemTransformInput { sessionID?: string }
 
-export interface ChatSystemTransformOutput {
-  system: string[]
-}
+export interface ChatSystemTransformOutput { system: string[] }
 
 export interface SessionEvent {
   type: string
@@ -52,9 +48,7 @@ export interface ToastBody {
 }
 
 export interface OpencodeClient {
-  tui: {
-    showToast(args: { body: ToastBody }): Promise<unknown>
-  }
+  tui: { showToast(args: { body: ToastBody }): Promise<unknown> }
   session: {
     messages(args: { path: { id: string } }): Promise<unknown>
     prompt(args: {
@@ -71,17 +65,10 @@ export interface OpencodeClient {
 
 export interface PluginHooks {
   config?: (config: PluginConfig) => Promise<void>
-  "command.execute.before"?: (
-    input: CommandExecuteBeforeInput,
-    output: CommandExecuteBeforeOutput,
-  ) => Promise<void>
-  "experimental.chat.system.transform"?: (
-    input: ChatSystemTransformInput,
-    output: ChatSystemTransformOutput,
-  ) => Promise<void>
+  tool?: Record<string, ToolDefinition>
+  "command.execute.before"?: (input: CommandExecuteBeforeInput, output: CommandExecuteBeforeOutput) => Promise<void>
+  "experimental.chat.system.transform"?: (input: ChatSystemTransformInput, output: ChatSystemTransformOutput) => Promise<void>
   event?: (input: { event: SessionEvent }) => Promise<void>
 }
 
-export interface PluginInput {
-  client: OpencodeClient
-}
+export interface PluginInput { client: OpencodeClient }
