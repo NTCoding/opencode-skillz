@@ -1,5 +1,12 @@
 import { createDontStopHooks } from "../commands/dont-stop/index.js"
-import type { PluginHooks, PluginInput } from "../types.js"
+import {
+  LINT_TOOL_NAME,
+  lintTool,
+} from "../tools/lint.js"
+import type {
+  PluginHooks,
+  PluginInput,
+} from "../types.js"
 import { registerAgents } from "./agents.js"
 import { registerCommands } from "./commands.js"
 
@@ -8,6 +15,7 @@ export function createPluginRegistry(input: PluginInput, pluginRoot: string): Pl
 
   return {
     ...dontStopHooks,
+    tool: { [LINT_TOOL_NAME]: lintTool },
     config: async (config) => {
       config.command ??= {}
       config.agent ??= {}
