@@ -199,4 +199,8 @@ Recommend one option in 1 short paragraph.
 
 ## Approval
 
+Before presenting the final design, review every component name against all rules in Component Naming Guidelines.
+
+If any name violates any naming rule, revise the design before presenting it.
+
 Ask the user which option to approve, reject, or combine.
