@@ -85,7 +85,7 @@ Components should be put into the correct layer based on the type of logic they 
 
 - `infra`: Technical capabilities live in here like database transactions, persistence, external service clients and so on. Use dedicated sub-folders to properly organize like `/persistence`, `/external-service`
 
-- `/infra/{gateway}`: This sub-layer handles receiving inputs from the outside world and returning responses to the outside world, like gateways sitting at the edge of the application. It's common to see http controllers and event handlers in this layer. Examples of `{gateway}` include `http`, `event-handlers`
+- `/infra/{gateway}`: This sub-layer handles receiving inputs from the outside world and returning responses to the outside world, like gateways sitting at the edge of the application. It's common to see http controllers and event handlers in this layer. Examples of `{gateway}` include `http`, `event-handlers`. Everything inside this layer must live in a sub-folder to avoid the root becoming a dumping ground and hiding design issues.
 
 The following folder names are baned because they are generic terms that become a dumping ground or workaround for bad design. Find a more precise name or ask for help.
 
