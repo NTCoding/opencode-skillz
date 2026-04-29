@@ -9,18 +9,28 @@ $ARGUMENTS
 
 1. Resolve the pull request from `$ARGUMENTS`.
 2. If `$ARGUMENTS` does not identify a PR URL or PR number, stop and ask for one.
-3. Before any GitHub command that requires authentication, run `gh auth token` and use the returned token inline as `GITHUB_TOKEN=<token>` on that GitHub command.
-4. If `gh` is unavailable or authentication fails, stop and report the exact command needed to verify GitHub CLI authentication.
-5. Run `gh pr diff <pr> --name-only` to identify changed files.
-6. Fetch existing PR review comments and do not post the same comment twice on the same line.
+3. Run `gh pr diff <pr> --name-only` to identify changed files.
+4. Fetch existing PR review comments and do not post the same comment twice on the same line.
 
-## Parallel Review Delegation
+## Parallel Review Subagents
 
-Delegate these two independent reviews to subagents in parallel:
+Invoke these two named OpenCode subagents in parallel using the Task tool:
+
+1. `pr-software-design-reviewer`
+2. `pr-test-quality-reviewer`
+
+Pass each subagent:
+
+- the resolved PR identifier
+- the changed file list
+- the changed diff context
+- the existing PR review comments
+
+Wait for both subagents to return before producing the final report.
 
 ## Software Design Compliance
 
-Software design subagent:
+The `pr-software-design-reviewer` subagent must:
 
 1. Review new and modified production code against `/nt-skillz:software-design`.
 2. Leave inline feedback only on changed PR diff lines.
@@ -28,11 +38,11 @@ Software design subagent:
 4. If a finding cannot be attached to a changed diff line, return it as a summary finding instead of posting an inline comment.
 5. Return the count of inline findings and summary findings.
 
-Do not review test-only changes in this subagent.
+Do not perform this review in the primary agent.
 
 ## Test Quality
 
-Test quality subagent:
+The `pr-test-quality-reviewer` subagent must:
 
 1. Review new and modified tests against `/nt-skillz:writing-tests`.
 2. Leave inline feedback only on changed PR diff lines.
@@ -40,7 +50,7 @@ Test quality subagent:
 4. If a finding cannot be attached to a changed diff line, return it as a summary finding instead of posting an inline comment.
 5. Return the count of inline findings and summary findings.
 
-Do not review production-only changes in this subagent.
+Do not perform this review in the primary agent.
 
 ## Test Coverage Analysis
 

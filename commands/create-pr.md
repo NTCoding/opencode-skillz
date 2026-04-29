@@ -130,13 +130,6 @@ Avoid low-signal detail such as trivial renames, minor refactors, or file-by-fil
 
 Write this section as a reviewer-focused design summary.
 
-## GitHub command authentication
-
-Before a GitHub command that needs authentication:
-
-1. Run `gh auth token`
-2. Use the returned token inline as `GITHUB_TOKEN=<token>` on the next GitHub command
-
 ## Execution steps
 
 1. Confirm the branch is ready for a pull request
