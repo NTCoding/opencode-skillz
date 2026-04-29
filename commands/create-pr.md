@@ -109,26 +109,17 @@ Rules:
 - do not invent new criteria without stating that they are additional reviewer notes
 - do not paraphrase loosely if exact wording exists in the source material
 
+Acceptance criteria describe verifiable outcomes like "Users can log i with their email address". An acceptance criteria is not an implementation instruction like "Add a script that accepts the same parameters". If you find yourself using workds like "add", "modify" in "acceptance criteria" stop and ask for help.
+
 ### `## Architecture and software design`
 
-This section is free-form.
+Describe major architectural changes like:
 
-Include the architectural and design details that matter most for review, based on the current change. Use judgment instead of rigid structure.
-
-Good topics to include when relevant:
-
-- important new components that were added
-- important existing components that were modified
-- responsibility or boundary changes between components
-- meaningful flow changes through the system
-- changed persistence, messaging, API, or integration behavior
-- new or changed dependencies
-- contract changes between internal modules or external systems
-- how the implemented design maps back to the approved design or plan
-
-Avoid low-signal detail such as trivial renames, minor refactors, or file-by-file narration unless those details are central to the design review.
-
-Write this section as a reviewer-focused design summary.
+1. Which packages / modules were added, removed, or impacted?
+2. Which components were added / modified inside each module and why?
+3. Are there any significant domain model changes (new concepts, changes to terminology)
+4. New or modified depeendecies between components
+5. New or modified dependencies on other services or libraries
 
 ## Execution steps
 
