@@ -87,6 +87,14 @@ Components should be put into the correct layer based on the type of logic they 
 
 - `/infra/{gateway}`: This sub-layer handles receiving inputs from the outside world and returning responses to the outside world, like gateways sitting at the edge of the application. It's common to see http controllers and event handlers in this layer. Examples of `{gateway}` include `http`, `event-handlers`
 
+The following folder names are baned because they are generic terms that become a dumping ground or workaround for bad design. Find a more precise name or ask for help.
+
+- `utils`
+- `helpers`
+- `models`
+- `core`
+- `shared`
+
 Each codebase has it's own layering conventions that should be respected, but when no layering convention exists use the above as the default.
 
 ### Component Archetypes
