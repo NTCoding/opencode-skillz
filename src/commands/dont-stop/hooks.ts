@@ -32,13 +32,24 @@ interface SessionMessage {
   parts?: MessagePart[]
 }
 
-function unwrapResponse<T>(result: T | { data: T }): T {
-  return typeof result === "object" && result !== null && "data" in result ? result.data : result
+const statusStartMarker = "<dont-stop-status>"
+const statusEndMarker = "</dont-stop-status>"
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function unwrapResponse(result: unknown): unknown {
+  if (isRecord(result) && "data" in result) {
+    return result.data
+  }
+
+  return result
 }
 
 function normalizeCriteria(value: string): string[] {
   return value
-    .split(/\n|;/)
+    .split(/[\n;]/)
     .map((item) => item.replace(/^\s*[-*]\s*/, "").trim())
     .filter(Boolean)
 }
@@ -76,49 +87,88 @@ function buildSystemInstruction(criteria: string[]): string {
 }
 
 function parseAssistantStatus(text: string): AssistantStatus | null {
-  const match = text.match(/<dont-stop-status>([\s\S]*?)<\/dont-stop-status>/i)
-  if (!match) return null
+  const lowerText = text.toLowerCase()
+  const startIndex = lowerText.indexOf(statusStartMarker)
+  const endIndex = lowerText.indexOf(statusEndMarker)
 
-  const body = match[1]
-  const stateMatch = body.match(/^\s*state\s*:\s*(continue|completion-requested|blocked-requested)\s*$/im)
-  const justificationMatch = body.match(/^\s*justification\s*:\s*(.+)\s*$/im)
-  const reasonMatch = body.match(/^\s*reason\s*:\s*(.+)\s*$/im)
+  if (startIndex < 0 || endIndex < 0 || endIndex <= startIndex) return null
+
+  const body = text.slice(startIndex + statusStartMarker.length, endIndex)
+  const fields = Object.fromEntries(body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.includes(":"))
+    .map((line) => [line.slice(0, line.indexOf(":")).trim(), line.slice(line.indexOf(":") + 1).trim()]))
+
+  const state = parseAssistantState(fields.state)
 
   return {
-    state: (stateMatch?.[1] as AssistantStatus["state"] | undefined) ?? "continue",
-    justification: justificationMatch?.[1]?.trim() ?? "",
-    reason: reasonMatch?.[1]?.trim() ?? "",
+    state,
+    justification: readStatusField(fields, "justification"),
+    reason: readStatusField(fields, "reason"),
   }
+}
+
+function readStatusField(fields: Record<string, string>, key: string): string {
+  const value = fields[key]
+
+  if (typeof value === "string") {
+    return value
+  }
+
+  return ""
+}
+
+function parseAssistantState(value: string | undefined): AssistantStatus["state"] {
+  if (value === "completion-requested" || value === "blocked-requested") {
+    return value
+  }
+
+  return "continue"
 }
 
 async function showToast(client: OpencodeClient, body: ToastBody): Promise<void> {
   try {
     await client.tui.showToast({ body })
-  } catch {}
+  } catch {
+    return
+  }
+}
+
+function isMessagePart(value: unknown): value is MessagePart {
+  return isRecord(value)
+}
+
+function isSessionMessage(value: unknown): value is SessionMessage {
+  if (!isRecord(value)) return false
+
+  if (!("parts" in value)) return true
+
+  return Array.isArray(value.parts) && value.parts.every(isMessagePart)
+}
+
+function readAssistantText(message: SessionMessage): string {
+  const parts = message.parts ?? []
+
+  return parts
+    .filter((part) => part.type === "text" && typeof part.text === "string")
+    .map((part) => part.text)
+    .join("\n")
 }
 
 async function getLatestAssistantStatus(client: OpencodeClient, sessionID: string): Promise<AssistantStatus | null> {
   const result = unwrapResponse(await client.session.messages({ path: { id: sessionID } }))
-  const messages = Array.isArray(result) ? (result as SessionMessage[]) : []
+  const messages = Array.isArray(result) ? result.filter(isSessionMessage) : []
 
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const entry = messages[index]
-    if (entry.info?.role !== "assistant") continue
-
-    const text = (entry.parts ?? [])
-      .filter((part) => part.type === "text" && typeof part.text === "string")
-      .map((part) => part.text)
-      .join("\n")
-
-    return parseAssistantStatus(text)
-  }
+  const latestAssistantMessage = [...messages].reverse().find((entry) => entry.info?.role === "assistant")
+  if (latestAssistantMessage) return parseAssistantStatus(readAssistantText(latestAssistantMessage))
 
   return null
 }
 
 function buildContinuationPrompt(criteria: string[], status: AssistantStatus | null): string {
   const reportedState = status?.state ?? "missing"
-  const reason = status?.reason || "none"
+  const reason = status?.reason ?? "none"
 
   return [
     "dont-stop remains active.",
@@ -168,18 +218,20 @@ async function notifyReviewRequested(
 function getDeletedSessionID(event: SessionEvent): string | undefined {
   if (event.type !== "session.deleted") return undefined
   const properties = event.properties
-  if (!properties || typeof properties !== "object") return undefined
+  if (!isRecord(properties)) return undefined
 
-  const info = (properties as { info?: { id?: unknown } }).info
-  return typeof info?.id === "string" ? info.id : undefined
+  const info = properties.info
+  if (!isRecord(info)) return undefined
+
+  return typeof info.id === "string" ? info.id : undefined
 }
 
 function getIdleSessionID(event: SessionEvent): string | undefined {
   if (event.type !== "session.idle") return undefined
   const properties = event.properties
-  if (!properties || typeof properties !== "object") return undefined
+  if (!isRecord(properties)) return undefined
 
-  const sessionID = (properties as { sessionID?: unknown }).sessionID
+  const sessionID = properties.sessionID
   return typeof sessionID === "string" ? sessionID : undefined
 }
 

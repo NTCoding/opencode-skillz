@@ -49,26 +49,19 @@ Provide the subagent with:
 - the changed file list
 - the changed diff context
 
-## Test Coverage Analysis
+## Tool-Generated PR Description Sections
 
-Add a test coverage analysis results section to the PR description:
+Add generated lint and coverage sections to the PR description:
 
-1. For each changed path from `gh pr diff <pr> --name-only`, run `/nt-skillz:vitest-coverage <file>`.
-2. Ignore only runs that print a `SKIP:` line.
-3. If every run prints a `SKIP:` line, use one fenced `text` block containing `No changed TypeScript source files.` as the coverage content.
-4. Otherwise, build the PR coverage block in this exact shape:
-    - `<!-- nt-skillz-coverage:start -->`
-    - `## Coverage`
-    - one `### \`<file>\`` heading for each non-`SKIP:` file
-    - one fenced `text` block containing the exact raw `/nt-skillz:vitest-coverage <file>` output directly under that file heading
-    - `<!-- nt-skillz-coverage:end -->`
-5. Run `gh pr view <pr> --json body --jq '.body'` and use the returned text as the current PR body.
-6. If the current PR body already contains both marker lines, replace only the text from `<!-- nt-skillz-coverage:start -->` through `<!-- nt-skillz-coverage:end -->` with the new coverage block.
-7. If the current PR body does not contain both marker lines, append the new coverage block to the end of the PR body separated by two newlines.
-8. Write the updated PR body to a temporary file.
-9. Run `gh pr edit <pr> --body-file <temporary-file>`.
-10. Do not summarize, interpret, or paraphrase the coverage output.
-11. Do not modify any other part of the PR body.
+1. Invoke the `nt_skillz_lint` tool with `mode: "pr-review"` and the resolved PR identifier.
+2. Invoke the `nt_skillz_vitest_coverage` tool with `mode: "pr-review"` and the resolved PR identifier.
+3. Use the exact markdown returned by each tool. Do not summarize, interpret, paraphrase, or reformat tool output.
+4. Run `gh pr view <pr> --json body --jq '.body'` and use the returned text as the current PR body.
+5. If the current PR body already contains both marker lines for a generated section, replace only the text from the start marker through the end marker with the new tool output for that section.
+6. If the current PR body does not contain both marker lines for a generated section, append the new tool output to the end of the PR body separated by two newlines.
+7. Write the updated PR body to a temporary file.
+8. Run `gh pr edit <pr> --body-file <temporary-file>`.
+9. Do not modify any other part of the PR body.
 
 ## Basic PR checks
 

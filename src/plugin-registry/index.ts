@@ -3,6 +3,10 @@ import {
   LINT_TOOL_NAME,
   lintTool,
 } from "../tools/lint.js"
+import {
+  VITEST_COVERAGE_TOOL_NAME,
+  vitestCoverageTool,
+} from "../tools/vitest-coverage.js"
 import type {
   PluginHooks,
   PluginInput,
@@ -15,7 +19,10 @@ export function createPluginRegistry(input: PluginInput, pluginRoot: string): Pl
 
   return {
     ...dontStopHooks,
-    tool: { [LINT_TOOL_NAME]: lintTool },
+    tool: {
+      [LINT_TOOL_NAME]: lintTool,
+      [VITEST_COVERAGE_TOOL_NAME]: vitestCoverageTool,
+    },
     config: async (config) => {
       config.command ??= {}
       config.agent ??= {}
