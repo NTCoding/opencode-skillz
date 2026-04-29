@@ -14,23 +14,9 @@ $ARGUMENTS
 
 ## Parallel Review Subtasks
 
-Invoke the default subagent twice in parallel using the Task tool:
+The `Software Design Compliance` and `Test Quality` reviews should run in parallel.
 
-1. software design review subtask
-2. test quality review subtask
-
-Pass each subtask:
-
-- the resolved PR identifier
-- the changed file list
-- the changed diff context
-- the existing PR review comments
-
-If the Task tool cannot invoke the default subagent, stop and report that subagent delegation is unavailable.
-
-Wait for both subtasks to return before producing the final report.
-
-## Software Design Compliance
+### Software Design Compliance
 
 Invoke the default subagent with a task prompt that requires it to:
 
@@ -40,9 +26,14 @@ Invoke the default subagent with a task prompt that requires it to:
 4. If a finding cannot be attached to a changed diff line, return it as a summary finding instead of posting an inline comment.
 5. Return the count of inline findings and summary findings.
 
-Do not perform this review in the primary agent.
+Provide the subagent with:
 
-## Test Quality
+- the resolved PR identifier
+- the changed file list
+- the changed diff context
+
+
+### Test Quality
 
 Invoke the default subagent with a task prompt that requires it to:
 
@@ -52,7 +43,11 @@ Invoke the default subagent with a task prompt that requires it to:
 4. If a finding cannot be attached to a changed diff line, return it as a summary finding instead of posting an inline comment.
 5. Return the count of inline findings and summary findings.
 
-Do not perform this review in the primary agent.
+Provide the subagent with:
+
+- the resolved PR identifier
+- the changed file list
+- the changed diff context
 
 ## Test Coverage Analysis
 
