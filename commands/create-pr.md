@@ -12,7 +12,7 @@ Create a draft pull request for the current branch.
 - The branch contains unrelated changes that do not belong in the same pull request
 - The base branch is unclear
 - The change requires assumptions about user value, scope, or design intent
-- An existing commit already on the branch does not comply with the required commit format and fixing it would require rewriting history
+- An existing commit title already on the branch does not comply with the required commit title format and fixing it would require rewriting history
 
 ## Required context gathering
 
@@ -42,9 +42,9 @@ If local changes exist:
 
 Do not create the pull request until `git status` is clean.
 
-## Commit rules
+## Commit title rules
 
-Every commit included in the pull request must use the full commit format defined below.
+Every commit included in the pull request must use the commit title format defined below.
 
 Use semantic commit types:
 
@@ -65,42 +65,12 @@ Rules:
 - Use `release` for version bumps or release preparation work
 - Use the smallest accurate scope
 - The commit subject must describe the user-facing change or the real engineering outcome
-- The commit body must explain why the change exists, not list files changed
-- The commit body must reference all relevant source-of-truth materials
-- The acceptance criteria must be copied from the source material, not loosely rewritten
+- Commit bodies are optional
+- Do not require existing commits to contain body sections
 
-Commit subject format:
+Commit title format:
 
 `<type>(<scope>): <short summary>`
-
-Commit body format:
-
-```text
-<type>(<scope>): <short summary>
-
-## Problem
-
-Source of truth:
-- Ticket: <ticket id or link>
-- Plan: <link>
-- Design: <link>
-- Additional references: <link if relevant>
-
-<Describe the actual user problem, business problem, or engineering risk being solved.
-Explain the user value or operational value.>
-
-## Solution
-
-<Describe the chosen solution and why it solves the problem. Focus on outcome and approach, not file inventory.>
-
-## Acceptance Criteria
-
-Source: copied from <ticket or plan reference>
-
-- <criterion 1>
-- <criterion 2>
-- <criterion 3>
-```
 
 ## Pull request title
 
@@ -171,7 +141,7 @@ Before a GitHub command that needs authentication:
 
 1. Confirm the branch is ready for a pull request
 2. If local changes exist, stage the relevant changes and create the required semantic commits until the working tree is clean
-3. Verify every commit included in the pull request complies with the required format
+3. Verify every commit included in the pull request complies with the required commit title format
 4. Push the branch if needed
 5. Create a draft pull request with the required description format
 6. Return the pull request URL
