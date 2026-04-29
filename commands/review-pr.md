@@ -70,6 +70,14 @@ Add a test coverage analysis results section to the PR description:
 10. Do not summarize, interpret, or paraphrase the coverage output.
 11. Do not modify any other part of the PR body.
 
+## Basic PR checks
+
+Look for the following issues on the PR:
+
+1. Unnecessary noise: does the PR contains noise in the dif like unnecessary formatting changes? Those should be removed to make the reviewer's job easier unless they are enforced by the project conventions.
+
+2. Out of scope changes: does the PR contain modification to files that are not strictly necessary that add more unnecessary noise to the diff? Like refactoring existing code.
+
 ## Final Report
 
 Report only:
