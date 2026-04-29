@@ -77,7 +77,7 @@ The following guidelines should be applied when designing components.
 
 ### Layering
 
-Components should be put into the correct layer based on the type of logic they contain.
+Components should be put into the correct layer based on the type of logic they contain. They MUST live in a folder (or sub folder) that represents their layer. Dumping everyting in the root of the module is forbidden (only entrypoints can live their like `index.ts` and `main.ts`)
 
 - `domain`: Business rules and domain logic. This should be kept pure and isolated from technical concerns like database transactions. A domain expert should be able to read it and understand it
 
@@ -202,5 +202,7 @@ Recommend one option in 1 short paragraph.
 Before presenting the final design, review every component name against all rules in Component Naming Guidelines.
 
 If any name violates any naming rule, revise the design before presenting it.
+
+Then review all components against all guidelines in Layering. If any components violates a layering rule, revise the design befor presenting it.
 
 Ask the user which option to approve, reject, or combine.
