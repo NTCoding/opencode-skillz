@@ -87,6 +87,35 @@ Components should be put into the correct layer based on the type of logic they 
 
 - `/infra/{gateway}`: This sub-layer handles receiving inputs from the outside world and returning responses to the outside world, like gateways sitting at the edge of the application. It's common to see http controllers and event handlers in this layer. Examples of `{gateway}` include `http`, `event-handlers`. Everything inside this layer must live in a sub-folder to avoid the root becoming a dumping ground and hiding design issues.
 
+#### Layer Import Rules
+
+Layering is enforced by imports. The use-case layer is the orchestration layer. Use cases can depend on infra. Infra capability code must stay application-agnostic and must not depend on use cases.
+
+Allowed dependencies:
+
+| Dependency | Reason |
+|---|---|
+| `domain/**` imports `domain/**` | Domain code can use other domain concepts. |
+| `use-case/**` imports `domain/**` | Use cases orchestrate domain behavior. |
+| `use-case/**` imports `infra/**` | Use cases orchestrate technical capabilities and domain behavior. This includes persistence, transactions, external services, logging, queues, caches, clients, and infra-owned types. |
+| `infra/gateway/**` imports `use-case/**` | Gateways receive outside-world input and call the use case that performs the application operation. |
+| composition root imports `use-case/**` and `infra/**` | The composition root wires runtime dependencies. It must not contain business logic. |
+
+Forbidden dependencies:
+
+| Dependency | Reason |
+|---|---|
+| `domain/**` imports `use-case/**` | Domain rules must not know which application operations exist. |
+| `domain/**` imports `infra/**` | Domain rules must not depend on databases, HTTP, queues, SDKs, logging, transactions, or other technical details. |
+| `infra/persistence/**` imports `use-case/**` | Persistence is a reusable technical capability. It must not know which use cases exist. |
+| `infra/external-service/**` imports `use-case/**` | External-service clients are reusable technical capabilities. They must not know which use cases exist. |
+| `infra/transactions/**` imports `use-case/**` | Transaction code is a reusable technical capability. It must not know which use cases exist. |
+| `infra/logging/**` imports `use-case/**` | Logging code is a reusable technical capability. It must not know which use cases exist. |
+| `infra/gateway/**` imports `infra/persistence/**` directly | Gateways must not bypass use cases to load or save application state. |
+| `infra/gateway/**` imports `infra/external-service/**` directly | Gateways must not bypass use cases to call external systems. |
+| `infra/gateway/**` imports `domain/**` to mutate domain objects directly | Gateways must not bypass use-case orchestration. |
+
+
 The following folder names are baned because they are generic terms that become a dumping ground or workaround for bad design. Find a more precise name or ask for help.
 
 - `utils`
