@@ -12,25 +12,27 @@ $ARGUMENTS
 3. Run `gh pr diff <pr> --name-only` to identify changed files.
 4. Fetch existing PR review comments and do not post the same comment twice on the same line.
 
-## Parallel Review Subagents
+## Parallel Review Subtasks
 
-Invoke these two named OpenCode subagents in parallel using the Task tool:
+Invoke the default subagent twice in parallel using the Task tool:
 
-1. `pr-software-design-reviewer`
-2. `pr-test-quality-reviewer`
+1. software design review subtask
+2. test quality review subtask
 
-Pass each subagent:
+Pass each subtask:
 
 - the resolved PR identifier
 - the changed file list
 - the changed diff context
 - the existing PR review comments
 
-Wait for both subagents to return before producing the final report.
+If the Task tool cannot invoke the default subagent, stop and report that subagent delegation is unavailable.
+
+Wait for both subtasks to return before producing the final report.
 
 ## Software Design Compliance
 
-The `pr-software-design-reviewer` subagent must:
+Invoke the default subagent with a task prompt that requires it to:
 
 1. Review new and modified production code against `/nt-skillz:software-design`.
 2. Leave inline feedback only on changed PR diff lines.
@@ -42,7 +44,7 @@ Do not perform this review in the primary agent.
 
 ## Test Quality
 
-The `pr-test-quality-reviewer` subagent must:
+Invoke the default subagent with a task prompt that requires it to:
 
 1. Review new and modified tests against `/nt-skillz:writing-tests`.
 2. Leave inline feedback only on changed PR diff lines.
