@@ -77,7 +77,7 @@ The following guidelines should be applied when designing components.
 
 ### Layering
 
-Components should be put into the correct layer based on the type of logic they contain.
+Components should be put into the correct layer based on the type of logic they contain. They MUST live in a folder (or sub folder) that represents their layer. Dumping everyting in the root of the module is forbidden (only entrypoints can live their like `index.ts` and `main.ts`)
 
 - `domain`: Business rules and domain logic. This should be kept pure and isolated from technical concerns like database transactions. A domain expert should be able to read it and understand it
 
@@ -85,7 +85,15 @@ Components should be put into the correct layer based on the type of logic they 
 
 - `infra`: Technical capabilities live in here like database transactions, persistence, external service clients and so on. Use dedicated sub-folders to properly organize like `/persistence`, `/external-service`
 
-- `/infra/{gateway}`: This sub-layer handles receiving inputs from the outside world and returning responses to the outside world, like gateways sitting at the edge of the application. It's common to see http controllers and event handlers in this layer. Examples of `{gateway}` include `http`, `event-handlers`
+- `/infra/{gateway}`: This sub-layer handles receiving inputs from the outside world and returning responses to the outside world, like gateways sitting at the edge of the application. It's common to see http controllers and event handlers in this layer. Examples of `{gateway}` include `http`, `event-handlers`. Everything inside this layer must live in a sub-folder to avoid the root becoming a dumping ground and hiding design issues.
+
+The following folder names are baned because they are generic terms that become a dumping ground or workaround for bad design. Find a more precise name or ask for help.
+
+- `utils`
+- `helpers`
+- `models`
+- `core`
+- `shared`
 
 Each codebase has it's own layering conventions that should be respected, but when no layering convention exists use the above as the default.
 
@@ -202,5 +210,7 @@ Recommend one option in 1 short paragraph.
 Before presenting the final design, review every component name against all rules in Component Naming Guidelines.
 
 If any name violates any naming rule, revise the design before presenting it.
+
+Then review all components against all guidelines in Layering. If any components violates a layering rule, revise the design befor presenting it.
 
 Ask the user which option to approve, reject, or combine.
