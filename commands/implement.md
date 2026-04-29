@@ -16,3 +16,12 @@ After each small TypeScript code change, call `nt_skillz_lint` with only the `fi
 - all lint errors on new code must be addressed before continuing
 - if the lint fails on existing code, ignore the error unless it is very close to the new code
 - line-length limits do not count as existing code; if new code causes a file-length lint error, it must be fixed
+
+## Test Coverage
+
+Before each commit:
+
+1. Run `git diff --name-only --cached --diff-filter=ACMR -- '*.ts' '*.tsx'`.
+2. For each returned path, run `/nt-skillz:vitest-coverage <file>`.
+3. Ignore only runs that print a `SKIP:` line.
+4. Do not create the commit unless every remaining file has 100% Vitest coverage (or it's impossible to achieve 100% test coverage for the relevant component)
