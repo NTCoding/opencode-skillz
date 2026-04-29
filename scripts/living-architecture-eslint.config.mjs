@@ -208,7 +208,6 @@ export default tseslint.config(
     },
     rules: {
       '@stylistic/indent': ['error', 2],
-      '@stylistic/object-curly-newline': ['error', { multiline: true, minProperties: 2 }],
       '@stylistic/object-property-newline': ['error', { allowAllPropertiesOnSameLine: false }],
     },
   },
