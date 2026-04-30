@@ -19,6 +19,17 @@ Purpose: package OpenCode workflow assets as a plugin.
 - Prefer minimal additions; only add new commands when needed.
 - Do not add `agent:` in command frontmatter unless the command must force a specific agent.
 
+## Command writing rules
+
+### Be eplicit, avoid vagueness
+
+Commands are run by agents that may choose different valid-looking tool calls unless the command removes that choice. A command must include the exact operation, command text, query text, arguments, and expected fields when those details are known. This prevents each run from rediscovering APIs, using different command variants, or failing because the agent guessed a tool shape.
+
+Examples:
+- Bad: Fetch unresolved GitHub review threads.
+- Good: Run `gh pr view "$PR_NUMBER" --json reviewThreads` and read unresolved threads from the returned `reviewThreads` field.
+- Good: If GraphQL is required, include the full `gh api graphql ...` command, the full query, variables, and response path.
+
 ## Versioning strategy
 
 - Use SemVer in `package.json`.
