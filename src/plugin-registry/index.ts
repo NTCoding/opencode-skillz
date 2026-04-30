@@ -4,6 +4,10 @@ import {
   lintTool,
 } from "../tools/lint.js"
 import {
+  PULL_REQUEST_FEEDBACK_TOOL_NAME,
+  pullRequestFeedbackTool,
+} from "../tools/pull-request-feedback-tool.js"
+import {
   VITEST_COVERAGE_TOOL_NAME,
 } from "../tools/vitest-coverage.js"
 import {
@@ -23,6 +27,7 @@ export function createPluginRegistry(input: PluginInput, pluginRoot: string): Pl
     ...dontStopHooks,
     tool: {
       [LINT_TOOL_NAME]: lintTool,
+      [PULL_REQUEST_FEEDBACK_TOOL_NAME]: pullRequestFeedbackTool,
       [VITEST_COVERAGE_TOOL_NAME]: vitestCoverageTool,
     },
     config: async (config) => {

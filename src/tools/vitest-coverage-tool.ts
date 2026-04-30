@@ -1,10 +1,13 @@
-import { tool } from "@opencode-ai/plugin"
+import {
+  tool,
+  type ToolDefinition,
+} from "@opencode-ai/plugin"
 import {
   runVitestCoverageReview,
   VITEST_COVERAGE_TOOL_NAME,
 } from "./vitest-coverage.js"
 
-export const vitestCoverageTool = tool({
+export const vitestCoverageTool: ToolDefinition = tool({
   description: "Run Vitest coverage for changed TypeScript source files.",
   args: {
     mode: tool.schema.string().optional().describe("Use 'pr-review' for pull request coverage."),

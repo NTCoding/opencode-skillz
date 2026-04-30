@@ -6,7 +6,10 @@ import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
 
 import { ESLint } from "eslint"
-import { tool } from "@opencode-ai/plugin"
+import {
+  tool,
+  type ToolDefinition,
+} from "@opencode-ai/plugin"
 import { childProcessCommandRunner } from "./pull-request-files.js"
 import { runPrReviewLint } from "./lint-review.js"
 
@@ -310,7 +313,7 @@ export async function runPortableLintFromCommandLine(commandLineArguments: strin
   return outcome.exitCode
 }
 
-export const lintTool = tool({
+export const lintTool: ToolDefinition = tool({
   description: "Run bundled TypeScript lint rules against current project files.",
   args: {
     mode: tool.schema.string().optional().describe("Use 'pr-review' to lint changed pull request TypeScript files."),
