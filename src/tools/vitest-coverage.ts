@@ -196,10 +196,6 @@ function resolveVitestBinaryFromDirectory(repositoryRoot: string, currentDirecto
 
   const parentDirectory = path.dirname(currentDirectory)
 
-  if (parentDirectory === currentDirectory) {
-    throw new CoverageUsageError(formatMissingVitestBinaryMessage(nextCheckedBinaryPaths))
-  }
-
   return resolveVitestBinaryFromDirectory(repositoryRoot, parentDirectory, nextCheckedBinaryPaths)
 }
 
