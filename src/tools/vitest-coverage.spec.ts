@@ -10,6 +10,7 @@ import type { CommandRunResult } from "./pull-request-files.js"
 import {
   type CapturedCoverageRun,
   createCoverageCommandRunner,
+  createCoverageSummaryCommandRunner,
   createRepository,
   createRepositoryWithoutVitest,
   installFailingVitestBinary,
@@ -256,5 +257,39 @@ describe("vitestCoverageTool", () => {
     } finally {
       removeDirectory(repositoryRoot)
     }
+  })
+})
+
+describe("createCoverageCommandRunner", () => {
+  it("returns missing reports directory error when coverage reports argument is absent", () => {
+    const capturedRuns: CapturedCoverageRun[] = []
+    const commandRunner = createCoverageCommandRunner(100, capturedRuns)
+
+    const commandResult = commandRunner.run("vitest", ["related", "src/missing.ts"], "/repository")
+
+    expect(commandResult).toStrictEqual({
+      status: 1,
+      stdout: "",
+      stderr: "missing reports directory",
+    })
+    expect(capturedRuns).toStrictEqual([{
+      executable: "vitest",
+      commandArguments: ["related", "src/missing.ts"],
+      workingDirectory: "/repository",
+    }])
+  })
+})
+
+describe("createCoverageSummaryCommandRunner", () => {
+  it("returns success without writing summary when coverage reports argument is absent", () => {
+    const commandRunner = createCoverageSummaryCommandRunner("{}")
+
+    const commandResult = commandRunner.run("vitest", ["related", "src/missing.ts"], "/repository")
+
+    expect(commandResult).toStrictEqual({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    })
   })
 })
