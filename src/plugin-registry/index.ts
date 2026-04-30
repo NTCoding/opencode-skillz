@@ -5,8 +5,10 @@ import {
 } from "../tools/lint.js"
 import {
   VITEST_COVERAGE_TOOL_NAME,
-  vitestCoverageTool,
 } from "../tools/vitest-coverage.js"
+import {
+  vitestCoverageTool,
+} from "../tools/vitest-coverage-tool.js"
 import type {
   PluginHooks,
   PluginInput,

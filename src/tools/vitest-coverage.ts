@@ -2,7 +2,6 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import process from "node:process"
-import { tool } from "@opencode-ai/plugin"
 import {
   childProcessCommandRunner,
   type CommandRunner,
@@ -176,23 +175,46 @@ function findPackageRootFromDirectory(repositoryRoot: string, directoryPath: str
   return findPackageRootFromDirectory(repositoryRoot, parentDirectoryPath)
 }
 
-function resolveVitestBinary(packageRoot: string): string {
-  const binaryPath = path.join(packageRoot, "node_modules", ".bin", "vitest")
+function formatMissingVitestBinaryMessage(checkedBinaryPaths: string[]): string {
+  return [
+    "Expected Vitest binary in one of:",
+    ...checkedBinaryPaths.map((binaryPath) => `- ${binaryPath}`),
+  ].join("\n")
+}
+
+function resolveVitestBinaryFromDirectory(repositoryRoot: string, currentDirectory: string, checkedBinaryPaths: string[]): string {
+  const binaryPath = path.join(currentDirectory, "node_modules", ".bin", "vitest")
+  const nextCheckedBinaryPaths = [...checkedBinaryPaths, binaryPath]
 
   if (fs.existsSync(binaryPath)) {
     return binaryPath
   }
 
-  throw new CoverageUsageError(`Expected Vitest binary at ${binaryPath}.`)
+  if (currentDirectory === repositoryRoot) {
+    throw new CoverageUsageError(formatMissingVitestBinaryMessage(nextCheckedBinaryPaths))
+  }
+
+  const parentDirectory = path.dirname(currentDirectory)
+
+  if (parentDirectory === currentDirectory) {
+    throw new CoverageUsageError(formatMissingVitestBinaryMessage(nextCheckedBinaryPaths))
+  }
+
+  return resolveVitestBinaryFromDirectory(repositoryRoot, parentDirectory, nextCheckedBinaryPaths)
+}
+
+function resolveVitestBinary(repositoryRoot: string, packageRoot: string): string {
+  return resolveVitestBinaryFromDirectory(path.resolve(repositoryRoot), path.resolve(packageRoot), [])
 }
 
 function runCoverageCommand(
+  repositoryRoot: string,
   packageRoot: string,
   packageRelativeFilePath: string,
   reportsDirectory: string,
   environment: CoverageExecutionEnvironment,
 ): CoverageCommandResult {
-  const commandResult = environment.commandRunner.run(resolveVitestBinary(packageRoot), [
+  const commandResult = environment.commandRunner.run(resolveVitestBinary(repositoryRoot, packageRoot), [
     "related",
     packageRelativeFilePath,
     "--run",
@@ -301,6 +323,7 @@ function formatCoverageErrorMessage(error: unknown): string {
 }
 
 function executeCoverageWithReports(
+  repositoryRoot: string,
   filePath: string,
   packageRoot: string,
   packageRelativeFilePath: string,
@@ -309,7 +332,7 @@ function executeCoverageWithReports(
   const reportsDirectory = environment.temporaryDirectoryCreator(path.join(os.tmpdir(), "nt-skillz-coverage-"))
 
   try {
-    const commandResult = runCoverageCommand(packageRoot, packageRelativeFilePath, reportsDirectory, environment)
+    const commandResult = runCoverageCommand(repositoryRoot, packageRoot, packageRelativeFilePath, reportsDirectory, environment)
 
     if (commandResult.errorMessage) {
       return {
@@ -355,7 +378,7 @@ function executeFileCoverage(repositoryRoot: string, filePath: string, environme
     const absoluteFilePath = path.resolve(repositoryRoot, filePath)
     const packageRoot = findPackageRootFromDirectory(repositoryRoot, path.dirname(absoluteFilePath))
     const packageRelativeFilePath = path.relative(packageRoot, absoluteFilePath)
-    return executeCoverageWithReports(filePath, packageRoot, packageRelativeFilePath, environment)
+    return executeCoverageWithReports(repositoryRoot, filePath, packageRoot, packageRelativeFilePath, environment)
   } catch (error) {
     const message = formatCoverageErrorMessage(error)
 
@@ -456,33 +479,3 @@ export async function runVitestCoverageReview(
     results,
   }
 }
-
-export const vitestCoverageTool = tool({
-  description: "Run Vitest coverage for changed TypeScript source files.",
-  args: {
-    mode: tool.schema.string().optional().describe("Use 'pr-review' for pull request coverage."),
-    pullRequest: tool.schema.string().optional().describe("Pull request number or URL for pr-review mode."),
-    base: tool.schema.string().optional().describe("Base git reference for pr-review mode when no pull request is provided."),
-    head: tool.schema.string().optional().describe("Head git reference for pr-review mode when base is provided."),
-    files: tool.schema.array(tool.schema.string()).optional().describe("Repository-relative files for files mode."),
-  },
-  async execute(request, context) {
-    context.metadata({ title: "Vitest coverage review" })
-    const outcome = await runVitestCoverageReview({
-      repositoryRoot: context.worktree,
-      mode: request.mode,
-      pullRequest: request.pullRequest,
-      base: request.base,
-      head: request.head,
-      files: request.files,
-    })
-
-    return {
-      output: outcome.markdown,
-      metadata: {
-        fileCount: outcome.results.length,
-        failedCount: outcome.results.filter((result) => result.status !== "passed").length,
-      },
-    }
-  },
-})
