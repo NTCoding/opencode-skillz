@@ -7,6 +7,8 @@ import { parseArgs } from "node:util"
 
 import { ESLint } from "eslint"
 import { tool } from "@opencode-ai/plugin"
+import { childProcessCommandRunner } from "./pull-request-files.js"
+import { runPrReviewLint } from "./lint-review.js"
 
 class UsageError extends Error {
   constructor(message: string) {
@@ -38,6 +40,8 @@ interface PortableLintRequest {
   base?: string
   head?: string
 }
+
+type LintToolMode = "files" | "pr-review"
 
 interface PortableLintOutcome {
   exitCode: number
@@ -72,6 +76,20 @@ function normalizeOptionalText(value: string | undefined): string | undefined {
   }
 
   return trimmedValue
+}
+
+function normalizeToolMode(value: string | undefined): LintToolMode {
+  const normalizedValue = normalizeOptionalText(value)
+
+  if (!normalizedValue) {
+    return "files"
+  }
+
+  if (normalizedValue === "files" || normalizedValue === "pr-review") {
+    return normalizedValue
+  }
+
+  throw new UsageError(`Expected lint mode to be 'files' or 'pr-review'. Got ${normalizedValue}.`)
 }
 
 function resolveDirectory(directoryPath: string): string {
@@ -295,11 +313,30 @@ export async function runPortableLintFromCommandLine(commandLineArguments: strin
 export const lintTool = tool({
   description: "Run bundled TypeScript lint rules against current project files.",
   args: {
+    mode: tool.schema.string().optional().describe("Use 'pr-review' to lint changed pull request TypeScript files."),
+    pullRequest: tool.schema.string().optional().describe("Pull request number or URL for pr-review mode."),
     files: tool.schema.array(tool.schema.string()).optional().describe("Relative .ts or .tsx file paths to lint."),
     base: tool.schema.string().optional().describe("Base git reference for PR-style changed-file linting."),
     head: tool.schema.string().optional().describe("Optional head git reference used with base."),
   },
   async execute(request, context) {
+    const mode = normalizeToolMode(request.mode)
+
+    if (mode === "pr-review") {
+      context.metadata({ title: "Lint pull request TypeScript changes" })
+      return {
+        output: await runPrReviewLint({
+          repositoryRoot: context.worktree,
+          pullRequest: normalizeOptionalText(request.pullRequest),
+          base: normalizeOptionalText(request.base),
+          head: normalizeOptionalText(request.head),
+        }, {
+          commandRunner: childProcessCommandRunner,
+          lintRunner: runPortableLint,
+        }),
+      }
+    }
+
     const filePaths = normalizeFilePaths(request.files)
     const baseReference = normalizeOptionalText(request.base)
     const headReference = normalizeOptionalText(request.head)

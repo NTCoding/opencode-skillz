@@ -153,12 +153,14 @@ export default tseslint.config(
       ecmaVersion: 2020,
       sourceType: 'module',
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['src/tools/*.spec.ts', 'src/tools/*-test-support.ts', 'vitest.config.ts'],
+        },
         tsconfigRootDir: lintRepositoryRoot,
       },
     },
     rules: {
-      'import/extensions': ['error', 'never', { ts: 'never', tsx: 'never', js: 'never', json: 'always' }],
+      'import/extensions': ['error', 'ignorePackages', { ts: 'never', tsx: 'never', js: 'always', json: 'always' }],
       'custom/no-generic-names': 'error',
       'no-warning-comments': 'off',
       'multiline-comment-style': 'off',

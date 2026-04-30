@@ -3,14 +3,22 @@ import path from "node:path"
 
 type FrontmatterValue = string | boolean
 
+const frontmatterPattern = /^---\n([^]*)\n---\n?([^]*)$/
+const markdownExtension = ".md"
+
 export interface MarkdownEntry {
   meta: Record<string, FrontmatterValue>
   body: string
 }
 
 function extractFrontmatter(content: string): MarkdownEntry {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
-  if (!match) return { meta: {}, body: content }
+  const match = frontmatterPattern.exec(content)
+  if (!match) {
+    return {
+      meta: {},
+      body: content,
+    }
+  }
 
   const meta: Record<string, FrontmatterValue> = {}
   for (const rawLine of match[1].split("\n")) {
@@ -21,13 +29,27 @@ function extractFrontmatter(content: string): MarkdownEntry {
     if (separatorIndex <= 0) continue
 
     const key = line.slice(0, separatorIndex).trim()
-    let value: FrontmatterValue = line.slice(separatorIndex + 1).trim().replace(/^['\"]|['\"]$/g, "")
-    if (value === "true") value = true
-    if (value === "false") value = false
+    const rawValue = stripEnclosingQuotes(line.slice(separatorIndex + 1).trim())
+    const value: FrontmatterValue = rawValue === "true" || rawValue === "false" ? rawValue === "true" : rawValue
     meta[key] = value
   }
 
-  return { meta, body: match[2] }
+  return {
+    meta,
+    body: match[2],
+  }
+}
+
+function stripEnclosingQuotes(value: string): string {
+  if (value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1)
+  }
+
+  if (value.startsWith('"') && value.endsWith('"')) {
+    return value.slice(1, -1)
+  }
+
+  return value
 }
 
 function readMarkdownFiles(directoryPath: string): string[] {
@@ -35,7 +57,7 @@ function readMarkdownFiles(directoryPath: string): string[] {
 
   return fs
     .readdirSync(directoryPath)
-    .filter((file) => file.endsWith(".md"))
+    .filter((file) => file.endsWith(markdownExtension))
     .sort((left, right) => left.localeCompare(right))
 }
 
@@ -45,7 +67,7 @@ export function readMarkdownEntries(pluginRoot: string, directoryName: string): 
   const entries: Record<string, MarkdownEntry> = {}
 
   for (const file of files) {
-    const name = file.replace(/\.md$/, "")
+    const name = file.slice(0, -markdownExtension.length)
     const fullPath = path.join(directoryPath, file)
     const content = fs.readFileSync(fullPath, "utf8")
     const entry = extractFrontmatter(content)

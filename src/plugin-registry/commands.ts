@@ -5,7 +5,17 @@ import { readMarkdownEntries } from "./markdown.js"
 
 function normalizeCommandReference(value: unknown): string {
   if (typeof value !== "string") return ""
-  return value.trim().replace(/_/g, "-")
+  return value.trim().replaceAll("_", "-")
+}
+
+function composeTemplate(rawTemplate: string, composedTemplate: string): string {
+  if (!composedTemplate) {
+    return rawTemplate
+  }
+
+  return [rawTemplate, `In addition you must adhere to the following:\n\n${composedTemplate}`]
+    .filter(Boolean)
+    .join("\n\n")
 }
 
 function loadMarkdownCommands(pluginRoot: string): Record<string, CommandDefinition> {
@@ -19,21 +29,18 @@ function loadMarkdownCommands(pluginRoot: string): Record<string, CommandDefinit
 
     stack.add(name)
 
-    let template = rawCommand.body
     const composeAfterName = normalizeCommandReference(rawCommand.meta.compose_after)
     const composedCommand = rawCommands[composeAfterName]
 
     if (composeAfterName && composedCommand) {
       const composedTemplate = buildComposedTemplate(composeAfterName, stack)
-      if (composedTemplate) {
-        template = [template, `In addition you must adhere to the following:\n\n${composedTemplate}`]
-          .filter(Boolean)
-          .join("\n\n")
-      }
+      const template = composeTemplate(rawCommand.body, composedTemplate)
+      stack.delete(name)
+      return template.trim()
     }
 
     stack.delete(name)
-    return template.trim()
+    return rawCommand.body.trim()
   }
 
   for (const [name, rawCommand] of Object.entries(rawCommands)) {

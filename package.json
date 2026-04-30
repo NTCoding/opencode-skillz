@@ -13,6 +13,10 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "lint": "npm run build && node scripts/lint-ts.mjs",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "prepare": "node scripts/install-git-hooks.mjs",
     "prepack": "npm run build"
   },
   "files": [
@@ -37,7 +41,9 @@
     "typescript-eslint": "^8.50.1"
   },
   "devDependencies": {
-    "@types/node": "^24.7.2"
+    "@types/node": "^24.7.2",
+    "@vitest/coverage-v8": "^4.1.5",
+    "vitest": "^4.1.5"
   },
   "publishConfig": {
     "access": "public"
