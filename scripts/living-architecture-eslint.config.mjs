@@ -160,7 +160,6 @@ export default tseslint.config(
       },
     },
     rules: {
-      'import/extensions': ['error', 'ignorePackages', { ts: 'never', tsx: 'never', js: 'always', json: 'always' }],
       'custom/no-generic-names': 'error',
       'no-warning-comments': 'off',
       'multiline-comment-style': 'off',
