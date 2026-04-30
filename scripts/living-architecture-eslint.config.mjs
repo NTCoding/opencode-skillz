@@ -154,7 +154,7 @@ export default tseslint.config(
       sourceType: 'module',
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['src/tools/*.spec.ts', 'src/tools/*-test-support.ts', 'vitest.config.ts'],
+          allowDefaultProject: ['vitest.config.ts'],
         },
         tsconfigRootDir: lintRepositoryRoot,
       },

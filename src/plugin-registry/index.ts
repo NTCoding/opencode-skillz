@@ -1,4 +1,13 @@
+import process from "node:process"
+
 import { createDontStopHooks } from "../commands/dont-stop/index.js"
+import {
+  createGitWorkflowGate,
+  type GitWorkflowGate,
+} from "../git-workflow-gates.js"
+import {
+  createPullRequestTool,
+} from "../tools/create-pr.js"
 import {
   LINT_TOOL_NAME,
   lintTool,
@@ -19,16 +28,41 @@ import type {
 } from "../types.js"
 import { registerAgents } from "./agents.js"
 import { registerCommands } from "./commands.js"
+import { childProcessCommandRunner } from "../tools/pull-request-files.js"
+
+function readLintedFilePaths(request: { files?: unknown }): string[] {
+  if (!Array.isArray(request.files)) {
+    return []
+  }
+
+  return request.files.filter((filePath) => typeof filePath === "string")
+}
+
+function createGateAwareLintTool(gate: GitWorkflowGate): typeof lintTool {
+  return {
+    ...lintTool,
+    async execute(request, context) {
+      const result = await lintTool.execute(request, context)
+      gate.recordLintedFiles(readLintedFilePaths(request))
+      return result
+    },
+  }
+}
 
 export function createPluginRegistry(input: PluginInput, pluginRoot: string): PluginHooks {
   const dontStopHooks = createDontStopHooks(input.client)
+  const gitWorkflowGate = createGitWorkflowGate(input.worktree ?? process.cwd(), childProcessCommandRunner)
 
   return {
     ...dontStopHooks,
     tool: {
-      [LINT_TOOL_NAME]: lintTool,
+      nt_skillz_create_pr: createPullRequestTool,
+      [LINT_TOOL_NAME]: createGateAwareLintTool(gitWorkflowGate),
       [PULL_REQUEST_FEEDBACK_TOOL_NAME]: pullRequestFeedbackTool,
       [VITEST_COVERAGE_TOOL_NAME]: vitestCoverageTool,
+    },
+    "tool.execute.before": async (hookInput, hookOutput) => {
+      gitWorkflowGate.beforeToolExecution(hookInput, hookOutput)
     },
     config: async (config) => {
       config.command ??= {}
