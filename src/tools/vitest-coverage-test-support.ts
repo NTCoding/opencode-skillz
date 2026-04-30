@@ -87,7 +87,18 @@ export function createCoverageCommandRunner(percent: number, capturedRuns: Captu
       }
 
       const reportsDirectory = reportsDirectoryArgument.replace("--coverage.reportsDirectory=", "")
-      writeCoverageSummary(reportsDirectory, path.join(workingDirectory, commandArguments[1]), percent)
+      const coverageIncludeArgument = commandArguments.find((commandArgument) => commandArgument.startsWith("--coverage.include="))
+
+      if (coverageIncludeArgument === undefined) {
+        return {
+          status: 1,
+          stdout: "",
+          stderr: "missing coverage include",
+        }
+      }
+
+      const coveredFilePath = coverageIncludeArgument.replace("--coverage.include=", "")
+      writeCoverageSummary(reportsDirectory, path.join(workingDirectory, coveredFilePath), percent)
 
       return {
         status: percent === 100 ? 0 : 1,

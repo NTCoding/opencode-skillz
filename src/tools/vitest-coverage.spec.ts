@@ -56,7 +56,14 @@ describe("runVitestCoverageReview", () => {
       })
 
       expect(outcome.markdown).toContain("| `src/covered.ts` | 100% | 100% | 100% | 100% | PASS |")
-      expect(capturedRuns[0].commandArguments).toContain("--coverage.include=src/covered.ts")
+      expect(capturedRuns[0].commandArguments).toStrictEqual([
+        "--run",
+        "--coverage.enabled",
+        "--coverage.include=src/covered.ts",
+        "--coverage.reporter=json-summary",
+        "--coverage.reporter=text",
+        expect.stringContaining("--coverage.reportsDirectory="),
+      ])
     } finally {
       removeDirectory(repositoryRoot)
     }
@@ -265,7 +272,7 @@ describe("createCoverageCommandRunner", () => {
     const capturedRuns: CapturedCoverageRun[] = []
     const commandRunner = createCoverageCommandRunner(100, capturedRuns)
 
-    const commandResult = commandRunner.run("vitest", ["related", "src/missing.ts"], "/repository")
+    const commandResult = commandRunner.run("vitest", ["--run", "--coverage.include=src/missing.ts"], "/repository")
 
     expect(commandResult).toStrictEqual({
       status: 1,
@@ -274,9 +281,25 @@ describe("createCoverageCommandRunner", () => {
     })
     expect(capturedRuns).toStrictEqual([{
       executable: "vitest",
-      commandArguments: ["related", "src/missing.ts"],
+      commandArguments: ["--run", "--coverage.include=src/missing.ts"],
       workingDirectory: "/repository",
     }])
+  })
+
+  it("returns missing coverage include error when coverage include argument is absent", () => {
+    const capturedRuns: CapturedCoverageRun[] = []
+    const commandRunner = createCoverageCommandRunner(100, capturedRuns)
+
+    const commandResult = commandRunner.run("vitest", [
+      "--run",
+      "--coverage.reportsDirectory=/tmp/coverage",
+    ], "/repository")
+
+    expect(commandResult).toStrictEqual({
+      status: 1,
+      stdout: "",
+      stderr: "missing coverage include",
+    })
   })
 })
 
@@ -284,7 +307,7 @@ describe("createCoverageSummaryCommandRunner", () => {
   it("returns success without writing summary when coverage reports argument is absent", () => {
     const commandRunner = createCoverageSummaryCommandRunner("{}")
 
-    const commandResult = commandRunner.run("vitest", ["related", "src/missing.ts"], "/repository")
+    const commandResult = commandRunner.run("vitest", ["--run", "--coverage.include=src/missing.ts"], "/repository")
 
     expect(commandResult).toStrictEqual({
       status: 0,

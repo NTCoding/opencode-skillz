@@ -211,8 +211,6 @@ function runCoverageCommand(
   environment: CoverageExecutionEnvironment,
 ): CoverageCommandResult {
   const commandResult = environment.commandRunner.run(resolveVitestBinary(repositoryRoot, packageRoot), [
-    "related",
-    packageRelativeFilePath,
     "--run",
     "--coverage.enabled",
     `--coverage.include=${packageRelativeFilePath}`,
