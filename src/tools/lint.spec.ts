@@ -221,6 +221,12 @@ describe("runPortableLint", () => {
       })
 
       expect(lintOutcome.exitCode).toBe(1)
+      expect(lintOutcome.output.split("\n").slice(0, 4)).toStrictEqual([
+        "Lint remediation guidance:",
+        "- Do not sacrifice code quality or test coverage to satisfy lint rules.",
+        "- These rules are not objectives; they are signs that code needs to be split, simplified, or clarified.",
+        "- Fix the underlying design or test issue instead of deleting assertions, disabling rules, or reducing coverage.",
+      ])
       expect(lintOutcome.output).toContain("Use const. Avoid mutation")
     } finally {
       await rm(repositoryRoot, {

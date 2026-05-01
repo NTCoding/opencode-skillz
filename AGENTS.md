@@ -7,6 +7,7 @@ Purpose: package OpenCode workflow assets as a plugin.
 - `index.js`: plugin entrypoint; auto-registers bundled commands and agents.
 - `commands/*.md`: command definitions (frontmatter + template body).
 - `agents/*.md`: custom agent definitions (frontmatter + full prompt body).
+- `src/tools/lint-guidance.ts`: lint failure remediation guidance injected by the lint tool.
 
 ## Conventions
 
@@ -18,6 +19,13 @@ Purpose: package OpenCode workflow assets as a plugin.
 - All plugin-provided commands must use the `nt-skillz:` prefix, including code-backed commands.
 - Prefer minimal additions; only add new commands when needed.
 - Do not add `agent:` in command frontmatter unless the command must force a specific agent.
+
+## Lint guidance mechanism
+
+- `src/tools/lint.ts` prepends lint failures with remediation guidance.
+- `src/tools/lint-guidance.ts` owns the generic message and rule-specific guidance.
+- Update `src/tools/lint-guidance.ts` when adding lint rules that represent design quality, test quality, type-safety, or security constraints.
+- Guidance must direct agents to fix the underlying problem, not suppress rules, delete coverage, or weaken assertions.
 
 ## Command writing rules
 

@@ -10,6 +10,7 @@ import {
   tool,
   type ToolDefinition,
 } from "@opencode-ai/plugin"
+import { createLintFailureGuidance } from "./lint-guidance.js"
 import { childProcessCommandRunner } from "./pull-request-files.js"
 import { runPrReviewLint } from "./lint-review.js"
 
@@ -222,6 +223,18 @@ function removeAnsiEscapeSequences(value: string): string {
   return value.replaceAll(ansiEscapeSequencePattern, "")
 }
 
+function prependLintFailureGuidance(formattedOutput: string, errorCount: number, lintFailureGuidance: string): string {
+  if (errorCount === 0) {
+    return formattedOutput
+  }
+
+  if (!formattedOutput) {
+    return lintFailureGuidance
+  }
+
+  return [lintFailureGuidance, "", formattedOutput].join("\n")
+}
+
 async function runEslint(repositoryRoot: string, lintTargets: string[]): Promise<PortableLintOutcome> {
   const previousLintRepositoryRoot = process.env.NT_SKILLZ_LINT_REPO_ROOT
   process.env.NT_SKILLZ_LINT_REPO_ROOT = repositoryRoot
@@ -241,7 +254,7 @@ async function runEslint(repositoryRoot: string, lintTargets: string[]): Promise
 
     return {
       exitCode: errorCount > 0 ? 1 : 0,
-      output: formattedOutput,
+      output: prependLintFailureGuidance(formattedOutput, errorCount, createLintFailureGuidance(lintResults)),
     }
   } finally {
     if (previousLintRepositoryRoot) {
