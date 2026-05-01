@@ -3,9 +3,8 @@ import os from "node:os"
 import path from "node:path"
 
 import { describe, expect, it } from "vitest"
-import type { CommandRunner, CommandRunResult } from "../../../git-workflow-gates.js"
-import { createPullRequestToolWithRunner } from "../../create-pr-tool.js"
-import { createPullRequestFeedbackTool } from "../../pull-request-feedback-tool.js"
+import type { CommandRunner, CommandRunResult } from "../git-workflow-gates.js"
+import { createPullRequestFeedbackTool } from "./pull-request-feedback-tool.js"
 
 interface ToolContext {
   worktree: string
@@ -77,46 +76,6 @@ function successfulJson(jsonValue: unknown): CommandRunResult {
     stderr: "",
   }
 }
-
-describe("createPullRequestToolWithRunner", () => {
-  it("returns pull request URL when draft pull request is created", async () => {
-    const commandInvocations: CommandInvocation[] = []
-    const toolDefinition = createPullRequestToolWithRunner(createCommandRunner([{
-      status: 0,
-      stdout: "",
-      stderr: "",
-    }, {
-      status: 0,
-      stdout: "feat(gates): enforce OpenCode workflow gates\n",
-      stderr: "",
-    }, {
-      status: 0,
-      stdout: "feature/workflow-gates\n",
-      stderr: "",
-    }, {
-      status: 0,
-      stdout: "origin/feature/workflow-gates\n",
-      stderr: "",
-    }, {
-      status: 0,
-      stdout: "https://github.com/example/repo/pull/7\n",
-      stderr: "",
-    }], commandInvocations))
-
-    const result = await toolDefinition.execute({
-      base: "main",
-      title: "feat(gates): enforce OpenCode workflow gates",
-      problem: "Agents can bypass the documented pull request workflow.",
-      solution: "Pull request creation goes through a validating tool.",
-      acceptanceCriteria: "Pull requests are created as drafts with required sections.",
-      architectureAndSoftwareDesign: "The plugin exposes a guarded pull request creation tool.",
-    }, createToolContext("/repo"))
-
-    expect(result).toStrictEqual({
-      output: "https://github.com/example/repo/pull/7",
-    })
-  })
-})
 
 describe("createPullRequestFeedbackTool", () => {
   it("returns formatted feedback and records tool metadata", async () => {

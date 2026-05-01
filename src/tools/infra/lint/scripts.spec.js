@@ -149,6 +149,8 @@ describe("checkToolsFolderBoundary", () => {
 
     try {
       expect(isTopLevelToolsTypeScriptFile(repositoryRoot, path.join(repositoryRoot, "src/tools/lint.ts"))).toBe(true)
+      expect(isTopLevelToolsTypeScriptFile(repositoryRoot, path.join(repositoryRoot, "src/tools/lint.spec.ts"))).toBe(false)
+      expect(isTopLevelToolsTypeScriptFile(repositoryRoot, path.join(repositoryRoot, "src/tools/lint.test.ts"))).toBe(false)
       expect(isTopLevelToolsTypeScriptFile(repositoryRoot, path.join(repositoryRoot, "src/tools/infra/lint/guidance.ts"))).toBe(false)
       expect(isTopLevelToolsTypeScriptFile(repositoryRoot, path.join(repositoryRoot, "src/tools/tsconfig.json"))).toBe(false)
     } finally {
@@ -169,6 +171,7 @@ describe("checkToolsFolderBoundary", () => {
         'import type { ToolDefinition } from "@opencode-ai/plugin"',
         'export const fakeTool: ToolDefinition = {}',
       ].join("\n"))
+      writeRepositoryFile(repositoryRoot, "src/tools/fake-tool.spec.ts", "export const fakeTool = {}")
       writeRepositoryFile(repositoryRoot, "src/tools/no-call-tool.ts", [
         'import { type ToolDefinition } from "@opencode-ai/plugin"',
         'export const fakeTool: ToolDefinition = createTool()',
