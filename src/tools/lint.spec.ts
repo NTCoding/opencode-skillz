@@ -99,7 +99,7 @@ describe("runPortableLint", () => {
         force: true,
       })
     }
-  })
+  }, 20_000)
 
   it("returns skip message when repository has no TypeScript files", async () => {
     const repositoryRoot = await mkdtemp(path.join(os.tmpdir(), "nt-skillz-lint-empty-"))

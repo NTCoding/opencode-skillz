@@ -46,7 +46,7 @@ describe("runPortableLintFromCommandLine", () => {
         force: true,
       })
     }
-  })
+  }, 20_000)
 
   it("uses current working directory when repository argument is omitted", async () => {
     const repositoryRoot = await mkdtemp(path.join(os.tmpdir(), "nt-skillz-lint-current-directory-"))

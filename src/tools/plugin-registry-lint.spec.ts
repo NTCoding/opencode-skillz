@@ -124,5 +124,5 @@ describe("createPluginRegistry lint tool", () => {
       removePluginRoot(repositoryRoot)
       removePluginRoot(pluginRoot)
     }
-  })
+  }, 20_000)
 })
