@@ -7,6 +7,10 @@ import {
   type CommandRunner,
   resolvePullRequestChangedFiles,
 } from "./pull-request-files.js"
+import {
+  type CoverageCommandSpec,
+  createVitestCoverageCommandSpec,
+} from "./vitest-coverage-command.js"
 
 export const VITEST_COVERAGE_TOOL_NAME = "nt_skillz_vitest_coverage"
 
@@ -175,49 +179,11 @@ function findPackageRootFromDirectory(repositoryRoot: string, directoryPath: str
   return findPackageRootFromDirectory(repositoryRoot, parentDirectoryPath)
 }
 
-function formatMissingVitestBinaryMessage(checkedBinaryPaths: string[]): string {
-  return [
-    "Expected Vitest binary in one of:",
-    ...checkedBinaryPaths.map((binaryPath) => `- ${binaryPath}`),
-  ].join("\n")
-}
-
-function resolveVitestBinaryFromDirectory(repositoryRoot: string, currentDirectory: string, checkedBinaryPaths: string[]): string {
-  const binaryPath = path.join(currentDirectory, "node_modules", ".bin", "vitest")
-  const nextCheckedBinaryPaths = [...checkedBinaryPaths, binaryPath]
-
-  if (fs.existsSync(binaryPath)) {
-    return binaryPath
-  }
-
-  if (currentDirectory === repositoryRoot) {
-    throw new CoverageUsageError(formatMissingVitestBinaryMessage(nextCheckedBinaryPaths))
-  }
-
-  const parentDirectory = path.dirname(currentDirectory)
-
-  return resolveVitestBinaryFromDirectory(repositoryRoot, parentDirectory, nextCheckedBinaryPaths)
-}
-
-function resolveVitestBinary(repositoryRoot: string, packageRoot: string): string {
-  return resolveVitestBinaryFromDirectory(path.resolve(repositoryRoot), path.resolve(packageRoot), [])
-}
-
 function runCoverageCommand(
-  repositoryRoot: string,
-  packageRoot: string,
-  packageRelativeFilePath: string,
-  reportsDirectory: string,
+  commandSpec: CoverageCommandSpec,
   environment: CoverageExecutionEnvironment,
 ): CoverageCommandResult {
-  const commandResult = environment.commandRunner.run(resolveVitestBinary(repositoryRoot, packageRoot), [
-    "--run",
-    "--coverage.enabled",
-    `--coverage.include=${packageRelativeFilePath}`,
-    "--coverage.reporter=json-summary",
-    "--coverage.reporter=text",
-    `--coverage.reportsDirectory=${reportsDirectory}`,
-  ], packageRoot)
+  const commandResult = environment.commandRunner.run(commandSpec.executable, commandSpec.commandArguments, commandSpec.workingDirectory)
 
   const output = [commandResult.stdout, commandResult.stderr].filter(Boolean).join("\n").trim()
 
@@ -326,7 +292,14 @@ function executeCoverageWithReports(
   const reportsDirectory = environment.temporaryDirectoryCreator(path.join(os.tmpdir(), "nt-skillz-coverage-"))
 
   try {
-    const commandResult = runCoverageCommand(repositoryRoot, packageRoot, packageRelativeFilePath, reportsDirectory, environment)
+    const commandSpec = createVitestCoverageCommandSpec({
+      repositoryRoot,
+      filePath,
+      packageRoot,
+      packageRelativeFilePath,
+      reportsDirectory,
+    })
+    const commandResult = runCoverageCommand(commandSpec, environment)
 
     if (commandResult.errorMessage) {
       return {
@@ -337,7 +310,7 @@ function executeCoverageWithReports(
       }
     }
 
-    const summary = readCoverageSummary(packageRoot, reportsDirectory, packageRelativeFilePath)
+    const summary = readCoverageSummary(commandSpec.coverageSummaryRoot, reportsDirectory, commandSpec.coverageSummaryFilePath)
 
     if (commandResult.status === 0 && hasCompleteCoverage(summary)) {
       return {
