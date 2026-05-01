@@ -265,6 +265,18 @@ describe("readPullRequestFeedback", () => {
     }
   })
 
+  it("throws mismatch error when GitHub returns a different pull request number", () => {
+    const commandRunner = createCommandRunner([
+      createSuccessfulCommandResult(createPullRequestView()),
+    ], [])
+
+    expect(() => readPullRequestFeedback({
+      repositoryRoot: "/repo",
+      pullRequestNumber: "8",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    }, { commandRunner })).toThrow("Expected GitHub PR number 8. Got 7.")
+  })
+
   it("throws truncation error when a review thread has more than one hundred comments", () => {
     const repositoryRoot = createRepository("src/example.ts", "export const target = true\n")
     const commandRunner = createCommandRunner([
@@ -284,4 +296,133 @@ describe("readPullRequestFeedback", () => {
       removeRepository(repositoryRoot)
     }
   })
+
+  it("throws input error when pull request number is blank", () => {
+    expect(() => readPullRequestFeedback({
+      repositoryRoot: "/repo",
+      pullRequestNumber: " ",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    })).toThrow("Expected pull request number to be non-empty. Got blank text.")
+  })
+
+  it("throws command error when GitHub lookup cannot run", () => {
+    const commandRunner = createCommandRunner([{
+      status: null,
+      stdout: "",
+      stderr: "",
+      errorMessage: "spawn failed",
+    }], [])
+
+    expect(() => readPullRequestFeedback({
+      repositoryRoot: "/repo",
+      pullRequestNumber: "7",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    }, { commandRunner })).toThrow("Expected GitHub pull request lookup to run. Got spawn failed.")
+  })
+
+  it("uses default command runner when dependencies are omitted", () => {
+    expect(() => readPullRequestFeedback({
+      repositoryRoot: "/missing/nt-skillz-pr-feedback",
+      pullRequestNumber: "7",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    })).toThrow("Expected GitHub pull request lookup to run.")
+  })
+
+  it("throws command status error when GitHub lookup fails without output", () => {
+    const commandRunner = createCommandRunner([{
+      status: 1,
+      stdout: "",
+      stderr: "",
+    }], [])
+
+    expect(() => readPullRequestFeedback({
+      repositoryRoot: "/repo",
+      pullRequestNumber: "7",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    }, { commandRunner })).toThrow("Expected GitHub pull request lookup to succeed. Got exit status 1.")
+  })
+
+  it("throws command output error when GitHub lookup fails with stderr", () => {
+    const commandRunner = createCommandRunner([{
+      status: 1,
+      stdout: "",
+      stderr: "GitHub unavailable",
+    }], [])
+
+    expect(() => readPullRequestFeedback({
+      repositoryRoot: "/repo",
+      pullRequestNumber: "7",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    }, { commandRunner })).toThrow("Expected GitHub pull request lookup to succeed. Got GitHub unavailable.")
+  })
+
+  it("throws JSON schema error when GitHub lookup returns invalid JSON", () => {
+    const commandRunner = createCommandRunner([{
+      status: 0,
+      stdout: "{}",
+      stderr: "",
+    }], [])
+
+    expect(() => readPullRequestFeedback({
+      repositoryRoot: "/repo",
+      pullRequestNumber: "7",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    }, { commandRunner })).toThrow("Expected GitHub pull request lookup to return valid JSON.")
+  })
+
+  it("throws cursor error when next review thread page has no cursor", () => {
+    const commandRunner = createCommandRunner([
+      createSuccessfulCommandResult(createPullRequestView()),
+      createSuccessfulCommandResult(createReviewThreadResponse([], true, null)),
+    ], [])
+
+    expect(() => readPullRequestFeedback({
+      repositoryRoot: "/repo",
+      pullRequestNumber: "7",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    }, { commandRunner })).toThrow("Expected GitHub review thread page cursor. Got null.")
+  })
+
+  it("formats missing local file, outdated line, and empty diff hunk", () => {
+    const repositoryRoot = createRepository("src/other.ts", "export const other = true\n")
+    const reviewThread = createReviewThread("thread_outdated", false)
+    reviewThread.path = "src/missing.ts"
+    reviewThread.line = null
+    reviewThread.isOutdated = true
+    reviewThread.comments.nodes[0].diffHunk = ""
+    const commandRunner = createCommandRunner([
+      createSuccessfulCommandResult(createPullRequestView()),
+      createSuccessfulCommandResult(createReviewThreadResponse([reviewThread], false, null)),
+    ], [])
+
+    try {
+      const feedback = readPullRequestFeedback({
+        repositoryRoot,
+        pullRequestNumber: "7",
+        pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+      }, { commandRunner })
+
+      expect(feedback).toContain("- Line: outdated")
+      expect(feedback).toContain("No diff hunk returned by GitHub.")
+      expect(feedback).toContain("Current local file not found: src/missing.ts")
+    } finally {
+      removeRepository(repositoryRoot)
+    }
+  })
+
+  it("throws when review thread has no comments", () => {
+    const reviewThread = createReviewThread("thread_empty", false)
+    reviewThread.comments.nodes = []
+    const commandRunner = createCommandRunner([
+      createSuccessfulCommandResult(createPullRequestView()),
+      createSuccessfulCommandResult(createReviewThreadResponse([reviewThread], false, null)),
+    ], [])
+
+    expect(() => readPullRequestFeedback({
+      repositoryRoot: "/repo",
+      pullRequestNumber: "7",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    }, { commandRunner })).toThrow("Expected review thread thread_empty to contain at least one comment. Got 0.")
+  })
+
 })

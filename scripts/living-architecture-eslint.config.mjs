@@ -155,6 +155,7 @@ export default tseslint.config(
       parserOptions: {
         projectService: {
           allowDefaultProject: ['vitest.config.ts'],
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 50,
         },
         tsconfigRootDir: lintRepositoryRoot,
       },

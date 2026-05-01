@@ -105,4 +105,113 @@ describe("createGitWorkflowGate", () => {
       },
     })).not.toThrow()
   })
+
+  it("ignores non-bash tool execution", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([], commandInvocations))
+
+    gate.beforeToolExecution({
+      tool: "read",
+    }, {
+      args: {},
+    })
+
+    expect(commandInvocations).toStrictEqual([])
+  })
+
+  it("allows bash commands that are not guarded", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([], commandInvocations))
+
+    gate.beforeToolExecution({
+      tool: "bash",
+    }, {
+      args: {
+        command: "git status --short",
+      },
+    })
+
+    expect(commandInvocations).toStrictEqual([])
+  })
+
+  it("throws command text error when bash command is missing", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([], commandInvocations))
+
+    expect(() => gate.beforeToolExecution({
+      tool: "bash",
+    }, {
+      args: {},
+    })).toThrow("Expected bash command text. Got undefined.")
+  })
+
+  it("returns git stderr when staged file discovery fails", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([{
+      status: 1,
+      stdout: "",
+      stderr: "fatal: not a repository",
+    }], commandInvocations))
+
+    expect(() => gate.beforeToolExecution({
+      tool: "bash",
+    }, {
+      args: {
+        command: "git commit -m 'feat(example): add example'",
+      },
+    })).toThrow("Expected staged TypeScript file discovery to succeed. Got fatal: not a repository.")
+  })
+
+  it("returns git stdout when working tree hash fails without stderr", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([{
+      status: 1,
+      stdout: "hash failed",
+      stderr: "",
+    }], commandInvocations))
+
+    expect(() => gate.recordLintedFiles(["src/example.ts"])).toThrow("Expected working tree hash for src/example.ts to succeed. Got hash failed.")
+  })
+
+  it("returns git status when staged hash fails without output", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([{
+      status: 0,
+      stdout: "src/example.ts\n",
+      stderr: "",
+    }, {
+      status: 2,
+      stdout: "",
+      stderr: "",
+    }], commandInvocations))
+
+    expect(() => gate.beforeToolExecution({
+      tool: "bash",
+    }, {
+      args: {
+        command: "git commit -m 'feat(example): add example'",
+      },
+    })).toThrow("Expected staged hash for src/example.ts to succeed. Got exit status 2.")
+  })
+
+  it("returns git run error when command runner cannot execute", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([{
+      status: null,
+      stdout: "",
+      stderr: "",
+      errorMessage: "spawn failed",
+    }], commandInvocations))
+
+    expect(() => gate.recordLintedFiles(["src/example.ts"])).toThrow("Expected working tree hash for src/example.ts to run. Got spawn failed.")
+  })
+
+  it("ignores non-TypeScript linted files", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([], commandInvocations))
+
+    gate.recordLintedFiles(["README.md"])
+
+    expect(commandInvocations).toStrictEqual([])
+  })
 })

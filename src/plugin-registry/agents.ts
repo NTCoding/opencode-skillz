@@ -21,8 +21,6 @@ function getParentAgentName(rawAgent: { meta: Record<string, unknown> }): string
 function appendAgentPromptParts(promptParts: string[], rawAgents: ReturnType<typeof readMarkdownEntries>, name: string): void {
   const rawAgent = rawAgents[name]
 
-  if (!rawAgent) return
-
   const parentAgentName = getParentAgentName(rawAgent)
 
   if (parentAgentName && rawAgents[parentAgentName]?.body) {
@@ -62,7 +60,6 @@ export function registerAgents(
 
   function collectPreloadedCommands(agentName: string, stack = new Set<string>()): string[] {
     const rawAgent = rawAgents[agentName]
-    if (!rawAgent) return []
     if (stack.has(agentName)) return parseCsvList(rawAgent.meta.preload_commands)
 
     stack.add(agentName)

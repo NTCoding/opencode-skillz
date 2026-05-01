@@ -7,7 +7,7 @@ import {
 } from "../git-workflow-gates.js"
 import {
   createPullRequestTool,
-} from "../tools/create-pr.js"
+} from "../tools/create-pr-tool.js"
 import {
   LINT_TOOL_NAME,
   lintTool,

@@ -64,6 +64,14 @@ const toolDirectory = path.dirname(fileURLToPath(import.meta.url))
 const toolRepositoryRoot = path.resolve(toolDirectory, "..", "..")
 const eslintConfigPath = path.join(toolRepositoryRoot, "scripts", "living-architecture-eslint.config.mjs")
 const gitBinaryPath = "/usr/bin/git"
+const helpText = [
+  "Usage: ./scripts/lint-ts.sh [--repo PATH] [--base REF] [--head REF] [file ...]",
+  "",
+  "Examples:",
+  "  ./scripts/lint-ts.sh --repo ../living-architecture --base origin/main",
+  "  ./scripts/lint-ts.sh --repo ../living-architecture packages/example/src/example.ts",
+  "  ./scripts/lint-ts.sh src/example.ts",
+].join("\n")
 
 export const LINT_TOOL_NAME = "nt_skillz_lint"
 
@@ -144,8 +152,7 @@ function runGitCommand(repositoryRoot: string, gitArguments: string[]): string {
     return gitResult.stdout
   }
 
-  const errorOutput = gitResult.stderr.trim() || gitResult.stdout.trim() || "git command failed"
-  throw new GitCommandError(`Expected git command to succeed. Got ${errorOutput}.`)
+  throw new GitCommandError(`Expected git command to succeed. Got ${gitResult.stderr.trim()}.`)
 }
 
 function readChangedTypeScriptFiles(repositoryRoot: string, baseReference: string, headReference: string): string[] {
@@ -260,18 +267,6 @@ function parsePortableLintCommandLine(commandLineArguments: string[]): PortableL
     allowPositionals: true,
   })
 
-  if (parsedArguments.values.help) {
-    process.stdout.write([
-      "Usage: ./scripts/lint-ts.sh [--repo PATH] [--base REF] [--head REF] [file ...]",
-      "",
-      "Examples:",
-      "  ./scripts/lint-ts.sh --repo ../living-architecture --base origin/main",
-      "  ./scripts/lint-ts.sh --repo ../living-architecture packages/example/src/example.ts",
-      "  ./scripts/lint-ts.sh src/example.ts",
-    ].join("\n") + "\n")
-    process.exit(0)
-  }
-
   return {
     repositoryRoot: resolveDirectory(parsedArguments.values.repo ?? process.cwd()),
     files: normalizeFilePaths(parsedArguments.positionals),
@@ -303,6 +298,11 @@ export async function runPortableLint(request: PortableLintRequest): Promise<Por
 }
 
 export async function runPortableLintFromCommandLine(commandLineArguments: string[]): Promise<number> {
+  if (commandLineArguments.includes("--help") || commandLineArguments.includes("-h")) {
+    process.stdout.write(`${helpText}\n`)
+    return 0
+  }
+
   const request = parsePortableLintCommandLine(commandLineArguments)
   const outcome = await runPortableLint(request)
 
@@ -355,7 +355,7 @@ export const lintTool: ToolDefinition = tool({
     })
 
     if (outcome.exitCode !== 0) {
-      throw new LintExecutionError(outcome.output || "Lint failed.")
+      throw new LintExecutionError(outcome.output)
     }
 
     return {
