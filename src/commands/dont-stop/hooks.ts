@@ -32,6 +32,8 @@ interface SessionMessage {
   parts?: MessagePart[]
 }
 
+type ActiveDontStopSession = NonNullable<ReturnType<DontStopState["get"]>>
+
 const statusStartMarker = "<dont-stop-status>"
 const statusEndMarker = "</dont-stop-status>"
 
@@ -128,11 +130,12 @@ function parseAssistantState(value: string | undefined): AssistantStatus["state"
 }
 
 async function showToast(client: OpencodeClient, body: ToastBody): Promise<void> {
-  try {
-    await client.tui.showToast({ body })
-  } catch {
-    return
-  }
+  const toastWasShown = await client.tui.showToast({ body }).then(
+    () => true,
+    () => false,
+  )
+
+  if (!toastWasShown) return
 }
 
 function isMessagePart(value: unknown): value is MessagePart {
@@ -192,13 +195,9 @@ function buildReviewRequestKey(status: AssistantStatus): string {
 
 async function notifyReviewRequested(
   client: OpencodeClient,
-  state: DontStopState,
-  sessionID: string,
+  session: ActiveDontStopSession,
   status: AssistantStatus,
 ): Promise<void> {
-  const session = state.get(sessionID)
-  if (!session) return
-
   const reviewKey = buildReviewRequestKey(status)
   if (session.pendingReviewKey === reviewKey) return
 
@@ -302,7 +301,7 @@ async function handleEvent(client: OpencodeClient, state: DontStopState, event: 
   try {
     const latestStatus = await getLatestAssistantStatus(client, sessionID)
     if (latestStatus?.state === "completion-requested" || latestStatus?.state === "blocked-requested") {
-      await notifyReviewRequested(client, state, sessionID, latestStatus)
+      await notifyReviewRequested(client, session, latestStatus)
       return
     }
 

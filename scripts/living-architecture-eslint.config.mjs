@@ -154,13 +154,13 @@ export default tseslint.config(
       sourceType: 'module',
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['src/tools/*.spec.ts', 'src/tools/*-test-support.ts', 'vitest.config.ts'],
+          allowDefaultProject: ['vitest.config.ts'],
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 50,
         },
         tsconfigRootDir: lintRepositoryRoot,
       },
     },
     rules: {
-      'import/extensions': ['error', 'ignorePackages', { ts: 'never', tsx: 'never', js: 'always', json: 'always' }],
       'custom/no-generic-names': 'error',
       'no-warning-comments': 'off',
       'multiline-comment-style': 'off',

@@ -35,28 +35,6 @@ const isForbiddenName = (name) => {
   })
 }
 
-const createFilenameMessage = (filename) => {
-  const forbiddenWord = findForbiddenWord(filename)
-
-  if (!forbiddenWord) {
-    return 'Generic filename. Use domain-specific naming.'
-  }
-
-  const guidance = forbiddenWordSuggestions[forbiddenWord]
-  return `Generic word "${forbiddenWord}" in filename. ${guidance}`
-}
-
-const createClassMessage = (className) => {
-  const forbiddenWord = findForbiddenWord(className)
-
-  if (!forbiddenWord) {
-    return `Generic class name "${className}". Use domain-specific naming.`
-  }
-
-  const guidance = forbiddenWordSuggestions[forbiddenWord]
-  return `Generic word "${forbiddenWord}" in class "${className}". ${guidance}`
-}
-
 const noGenericNames = {
   meta: {
     type: 'problem',
@@ -80,7 +58,7 @@ const noGenericNames = {
 
         context.report({
           node: node.id,
-          message: createClassMessage(node.id.name),
+          message: `Generic word "${findForbiddenWord(node.id.name)}" in class "${node.id.name}". ${forbiddenWordSuggestions[findForbiddenWord(node.id.name)]}`,
         })
       },
       Program(node) {
@@ -90,7 +68,7 @@ const noGenericNames = {
 
         context.report({
           node,
-          message: createFilenameMessage(filename),
+          message: `Generic word "${findForbiddenWord(filename)}" in filename. ${forbiddenWordSuggestions[findForbiddenWord(filename)]}`,
         })
       },
     }

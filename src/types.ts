@@ -66,9 +66,17 @@ export interface OpencodeClient {
 export interface PluginHooks {
   config?: (config: PluginConfig) => Promise<void>
   tool?: Record<string, ToolDefinition>
+  "tool.execute.before"?: (input: ToolExecuteBeforeInput, output: ToolExecuteBeforeOutput) => Promise<void>
   "command.execute.before"?: (input: CommandExecuteBeforeInput, output: CommandExecuteBeforeOutput) => Promise<void>
   "experimental.chat.system.transform"?: (input: ChatSystemTransformInput, output: ChatSystemTransformOutput) => Promise<void>
   event?: (input: { event: SessionEvent }) => Promise<void>
 }
 
-export interface PluginInput { client: OpencodeClient }
+export interface ToolExecuteBeforeInput { tool: string }
+
+export interface ToolExecuteBeforeOutput { args: Record<string, unknown> }
+
+export interface PluginInput {
+  client: OpencodeClient
+  worktree?: string
+}

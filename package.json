@@ -1,6 +1,6 @@
 {
   "name": "@nt-ai-lab/opencode-skillz",
-  "version": "0.3.14",
+  "version": "0.4.0",
   "description": "Bundled OpenCode commands and agents",
   "type": "module",
   "main": "dist/index.js",
@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "npm run build && node scripts/lint-ts.mjs",
+    "lint": "npm run build && node scripts/check-tools-folder-boundary.mjs && node scripts/lint-ts.mjs",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "prepare": "node scripts/install-git-hooks.mjs",
@@ -38,7 +38,8 @@
     "eslint-plugin-sonarjs": "^3.0.5",
     "eslint-plugin-unicorn": "^62.0.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.50.1"
+    "typescript-eslint": "^8.50.1",
+    "zod": "^4.4.1"
   },
   "devDependencies": {
     "@types/node": "^24.7.2",

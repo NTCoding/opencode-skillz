@@ -6,9 +6,13 @@ import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
 
 import { ESLint } from "eslint"
-import { tool } from "@opencode-ai/plugin"
-import { childProcessCommandRunner } from "./pull-request-files.js"
-import { runPrReviewLint } from "./lint-review.js"
+import {
+  tool,
+  type ToolDefinition,
+} from "@opencode-ai/plugin"
+import { createLintFailureGuidance } from "./infra/lint/guidance.js"
+import { childProcessCommandRunner } from "./infra/source-control/changed-files.js"
+import { runPrReviewLint } from "./infra/lint/review.js"
 
 class UsageError extends Error {
   constructor(message: string) {
@@ -61,6 +65,14 @@ const toolDirectory = path.dirname(fileURLToPath(import.meta.url))
 const toolRepositoryRoot = path.resolve(toolDirectory, "..", "..")
 const eslintConfigPath = path.join(toolRepositoryRoot, "scripts", "living-architecture-eslint.config.mjs")
 const gitBinaryPath = "/usr/bin/git"
+const helpText = [
+  "Usage: ./scripts/lint-ts.sh [--repo PATH] [--base REF] [--head REF] [file ...]",
+  "",
+  "Examples:",
+  "  ./scripts/lint-ts.sh --repo ../living-architecture --base origin/main",
+  "  ./scripts/lint-ts.sh --repo ../living-architecture packages/example/src/example.ts",
+  "  ./scripts/lint-ts.sh src/example.ts",
+].join("\n")
 
 export const LINT_TOOL_NAME = "nt_skillz_lint"
 
@@ -141,8 +153,8 @@ function runGitCommand(repositoryRoot: string, gitArguments: string[]): string {
     return gitResult.stdout
   }
 
-  const errorOutput = gitResult.stderr.trim() || gitResult.stdout.trim() || "git command failed"
-  throw new GitCommandError(`Expected git command to succeed. Got ${errorOutput}.`)
+  const failureOutput = gitResult.stderr.trim() || gitResult.stdout.trim() || `exit status ${gitResult.status}`
+  throw new GitCommandError(`Expected git command to succeed. Got ${failureOutput}.`)
 }
 
 function readChangedTypeScriptFiles(repositoryRoot: string, baseReference: string, headReference: string): string[] {
@@ -212,6 +224,18 @@ function removeAnsiEscapeSequences(value: string): string {
   return value.replaceAll(ansiEscapeSequencePattern, "")
 }
 
+export function prependLintFailureGuidance(formattedOutput: string, errorCount: number, lintFailureGuidance: string): string {
+  if (errorCount === 0) {
+    return formattedOutput
+  }
+
+  if (!formattedOutput) {
+    return lintFailureGuidance
+  }
+
+  return [lintFailureGuidance, "", formattedOutput].join("\n")
+}
+
 async function runEslint(repositoryRoot: string, lintTargets: string[]): Promise<PortableLintOutcome> {
   const previousLintRepositoryRoot = process.env.NT_SKILLZ_LINT_REPO_ROOT
   process.env.NT_SKILLZ_LINT_REPO_ROOT = repositoryRoot
@@ -231,7 +255,7 @@ async function runEslint(repositoryRoot: string, lintTargets: string[]): Promise
 
     return {
       exitCode: errorCount > 0 ? 1 : 0,
-      output: formattedOutput,
+      output: prependLintFailureGuidance(formattedOutput, errorCount, createLintFailureGuidance(lintResults)),
     }
   } finally {
     if (previousLintRepositoryRoot) {
@@ -256,18 +280,6 @@ function parsePortableLintCommandLine(commandLineArguments: string[]): PortableL
     },
     allowPositionals: true,
   })
-
-  if (parsedArguments.values.help) {
-    process.stdout.write([
-      "Usage: ./scripts/lint-ts.sh [--repo PATH] [--base REF] [--head REF] [file ...]",
-      "",
-      "Examples:",
-      "  ./scripts/lint-ts.sh --repo ../living-architecture --base origin/main",
-      "  ./scripts/lint-ts.sh --repo ../living-architecture packages/example/src/example.ts",
-      "  ./scripts/lint-ts.sh src/example.ts",
-    ].join("\n") + "\n")
-    process.exit(0)
-  }
 
   return {
     repositoryRoot: resolveDirectory(parsedArguments.values.repo ?? process.cwd()),
@@ -300,6 +312,11 @@ export async function runPortableLint(request: PortableLintRequest): Promise<Por
 }
 
 export async function runPortableLintFromCommandLine(commandLineArguments: string[]): Promise<number> {
+  if (commandLineArguments.includes("--help") || commandLineArguments.includes("-h")) {
+    process.stdout.write(`${helpText}\n`)
+    return 0
+  }
+
   const request = parsePortableLintCommandLine(commandLineArguments)
   const outcome = await runPortableLint(request)
 
@@ -310,7 +327,7 @@ export async function runPortableLintFromCommandLine(commandLineArguments: strin
   return outcome.exitCode
 }
 
-export const lintTool = tool({
+export const lintTool: ToolDefinition = tool({
   description: "Run bundled TypeScript lint rules against current project files.",
   args: {
     mode: tool.schema.string().optional().describe("Use 'pr-review' to lint changed pull request TypeScript files."),
@@ -352,7 +369,7 @@ export const lintTool = tool({
     })
 
     if (outcome.exitCode !== 0) {
-      throw new LintExecutionError(outcome.output || "Lint failed.")
+      throw new LintExecutionError(outcome.output)
     }
 
     return {

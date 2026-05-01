@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { runPrReviewLint } from "./lint-review.js"
+import { runPrReviewLint } from "./review.js"
 import type {
   CommandRunner,
   CommandRunResult,
-} from "./pull-request-files.js"
+} from "../source-control/changed-files.js"
 
 function createChangedFileRunner(changedFiles: string[]): CommandRunner {
   return {

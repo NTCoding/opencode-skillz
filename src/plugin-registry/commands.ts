@@ -24,7 +24,6 @@ function loadMarkdownCommands(pluginRoot: string): Record<string, CommandDefinit
 
   function buildComposedTemplate(name: string, stack = new Set<string>()): string {
     const rawCommand = rawCommands[name]
-    if (!rawCommand) return ""
     if (stack.has(name)) return rawCommand.body
 
     stack.add(name)

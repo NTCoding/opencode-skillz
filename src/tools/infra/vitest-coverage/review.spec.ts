@@ -4,9 +4,9 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import {
   runVitestCoverageReview,
-} from "./vitest-coverage.js"
-import { vitestCoverageTool } from "./vitest-coverage-tool.js"
-import type { CommandRunResult } from "./pull-request-files.js"
+} from "./review.js"
+import { vitestCoverageTool } from "../../vitest-coverage-tool.js"
+import type { CommandRunResult } from "../source-control/changed-files.js"
 import {
   type CapturedCoverageRun,
   createCoverageCommandRunner,
@@ -15,7 +15,7 @@ import {
   createRepositoryWithoutVitest,
   installFailingVitestBinary,
   removeDirectory,
-} from "./vitest-coverage-test-support.js"
+} from "./test-support.js"
 
 describe("runVitestCoverageReview", () => {
   it("returns no source files markdown when changed files are not coverable TypeScript sources", async () => {
@@ -56,7 +56,14 @@ describe("runVitestCoverageReview", () => {
       })
 
       expect(outcome.markdown).toContain("| `src/covered.ts` | 100% | 100% | 100% | 100% | PASS |")
-      expect(capturedRuns[0].commandArguments).toContain("--coverage.include=src/covered.ts")
+      expect(capturedRuns[0].commandArguments).toStrictEqual([
+        "--run",
+        "--coverage.enabled",
+        "--coverage.include=src/covered.ts",
+        "--coverage.reporter=json-summary",
+        "--coverage.reporter=text",
+        expect.stringContaining("--coverage.reportsDirectory="),
+      ])
     } finally {
       removeDirectory(repositoryRoot)
     }
@@ -114,7 +121,115 @@ describe("runVitestCoverageReview", () => {
     }
   })
 
-  it("reports every searched Vitest binary path when nested package and root have no Vitest", async () => {
+  it("executes Yarn Vitest command when workspace lockfile exists without Vitest binary", async () => {
+    const repositoryRoot = createRepositoryWithoutVitest("apps/example-app/src/covered.ts")
+    const packageRoot = path.join(repositoryRoot, "apps", "example-app")
+    const capturedRuns: CapturedCoverageRun[] = []
+    fs.writeFileSync(path.join(repositoryRoot, "yarn.lock"), "")
+    fs.writeFileSync(path.join(packageRoot, "package.json"), "{}")
+
+    try {
+      const outcome = await runVitestCoverageReview({
+        repositoryRoot,
+        mode: "files",
+        files: ["apps/example-app/src/covered.ts"],
+      }, {
+        commandRunner: createCoverageCommandRunner(100, capturedRuns),
+        temporaryDirectoryCreator: fs.mkdtempSync,
+        temporaryDirectoryRemover: removeDirectory,
+      })
+
+      expect(outcome.markdown).toContain("| `apps/example-app/src/covered.ts` | 100% | 100% | 100% | 100% | PASS |")
+      expect(capturedRuns[0]).toStrictEqual({
+        executable: "yarn",
+        commandArguments: [
+          "vitest",
+          "--run",
+          "--coverage.enabled",
+          "--coverage.include=apps/example-app/src/covered.ts",
+          "--coverage.reporter=json-summary",
+          "--coverage.reporter=text",
+          expect.stringContaining("--coverage.reportsDirectory="),
+        ],
+        workingDirectory: repositoryRoot,
+      })
+    } finally {
+      removeDirectory(repositoryRoot)
+    }
+  })
+
+  it("executes pnpm Vitest command when pnpm workspace lockfile exists without Vitest binary", async () => {
+    const repositoryRoot = createRepositoryWithoutVitest("packages/example/src/covered.ts")
+    const packageRoot = path.join(repositoryRoot, "packages", "example")
+    const capturedRuns: CapturedCoverageRun[] = []
+    fs.writeFileSync(path.join(repositoryRoot, "pnpm-lock.yaml"), "")
+    fs.writeFileSync(path.join(packageRoot, "package.json"), "{}")
+
+    try {
+      await runVitestCoverageReview({
+        repositoryRoot,
+        mode: "files",
+        files: ["packages/example/src/covered.ts"],
+      }, {
+        commandRunner: createCoverageCommandRunner(100, capturedRuns),
+        temporaryDirectoryCreator: fs.mkdtempSync,
+        temporaryDirectoryRemover: removeDirectory,
+      })
+
+      expect(capturedRuns[0].executable).toBe("pnpm")
+      expect(capturedRuns[0].commandArguments).toStrictEqual([
+        "exec",
+        "vitest",
+        "--run",
+        "--coverage.enabled",
+        "--coverage.include=packages/example/src/covered.ts",
+        "--coverage.reporter=json-summary",
+        "--coverage.reporter=text",
+        expect.stringContaining("--coverage.reportsDirectory="),
+      ])
+      expect(capturedRuns[0].workingDirectory).toBe(repositoryRoot)
+    } finally {
+      removeDirectory(repositoryRoot)
+    }
+  })
+
+  it("executes npm Vitest command when npm workspace lockfile exists without Vitest binary", async () => {
+    const repositoryRoot = createRepositoryWithoutVitest("packages/example/src/covered.ts")
+    const packageRoot = path.join(repositoryRoot, "packages", "example")
+    const capturedRuns: CapturedCoverageRun[] = []
+    fs.writeFileSync(path.join(repositoryRoot, "package-lock.json"), "{}")
+    fs.writeFileSync(path.join(packageRoot, "package.json"), "{}")
+
+    try {
+      await runVitestCoverageReview({
+        repositoryRoot,
+        mode: "files",
+        files: ["packages/example/src/covered.ts"],
+      }, {
+        commandRunner: createCoverageCommandRunner(100, capturedRuns),
+        temporaryDirectoryCreator: fs.mkdtempSync,
+        temporaryDirectoryRemover: removeDirectory,
+      })
+
+      expect(capturedRuns[0].executable).toBe("npm")
+      expect(capturedRuns[0].commandArguments).toStrictEqual([
+        "exec",
+        "--",
+        "vitest",
+        "--run",
+        "--coverage.enabled",
+        "--coverage.include=packages/example/src/covered.ts",
+        "--coverage.reporter=json-summary",
+        "--coverage.reporter=text",
+        expect.stringContaining("--coverage.reportsDirectory="),
+      ])
+      expect(capturedRuns[0].workingDirectory).toBe(repositoryRoot)
+    } finally {
+      removeDirectory(repositoryRoot)
+    }
+  })
+
+  it("reports every searched command source when nested package has no Vitest binary or lockfile", async () => {
     const repositoryRoot = createRepositoryWithoutVitest("apps/example-app/src/no-vitest.ts")
     const packageRoot = path.join(repositoryRoot, "apps", "example-app")
     fs.writeFileSync(path.join(packageRoot, "package.json"), "{}")
@@ -130,10 +245,20 @@ describe("runVitestCoverageReview", () => {
         temporaryDirectoryRemover: removeDirectory,
       })
 
+      const expectedMissingCommandMessage = [
+        "Expected Vitest binary in one of:",
+        `- ${path.join(repositoryRoot, "apps", "example-app", "node_modules", ".bin", "vitest")}`,
+        `- ${path.join(repositoryRoot, "apps", "node_modules", ".bin", "vitest")}`,
+        `- ${path.join(repositoryRoot, "node_modules", ".bin", "vitest")}`,
+        "or workspace package manager lockfile in one of:",
+        `- ${path.join(repositoryRoot, "yarn.lock")}`,
+        `- ${path.join(repositoryRoot, "pnpm-lock.yaml")}`,
+        `- ${path.join(repositoryRoot, "package-lock.json")}`,
+        `- ${path.join(repositoryRoot, "npm-shrinkwrap.json")}`,
+      ].join("\n")
+
       expect(outcome.results[0].status).toBe("errored")
-      expect(outcome.markdown).toContain("Expected Vitest binary in one of:")
-      expect(outcome.markdown).toContain(path.join(repositoryRoot, "apps", "example-app", "node_modules", ".bin", "vitest"))
-      expect(outcome.markdown).toContain(path.join(repositoryRoot, "node_modules", ".bin", "vitest"))
+      expect(outcome.markdown).toContain(expectedMissingCommandMessage)
     } finally {
       removeDirectory(repositoryRoot)
     }
@@ -265,7 +390,7 @@ describe("createCoverageCommandRunner", () => {
     const capturedRuns: CapturedCoverageRun[] = []
     const commandRunner = createCoverageCommandRunner(100, capturedRuns)
 
-    const commandResult = commandRunner.run("vitest", ["related", "src/missing.ts"], "/repository")
+    const commandResult = commandRunner.run("vitest", ["--run", "--coverage.include=src/missing.ts"], "/repository")
 
     expect(commandResult).toStrictEqual({
       status: 1,
@@ -274,9 +399,25 @@ describe("createCoverageCommandRunner", () => {
     })
     expect(capturedRuns).toStrictEqual([{
       executable: "vitest",
-      commandArguments: ["related", "src/missing.ts"],
+      commandArguments: ["--run", "--coverage.include=src/missing.ts"],
       workingDirectory: "/repository",
     }])
+  })
+
+  it("returns missing coverage include error when coverage include argument is absent", () => {
+    const capturedRuns: CapturedCoverageRun[] = []
+    const commandRunner = createCoverageCommandRunner(100, capturedRuns)
+
+    const commandResult = commandRunner.run("vitest", [
+      "--run",
+      "--coverage.reportsDirectory=/tmp/coverage",
+    ], "/repository")
+
+    expect(commandResult).toStrictEqual({
+      status: 1,
+      stdout: "",
+      stderr: "missing coverage include",
+    })
   })
 })
 
@@ -284,7 +425,7 @@ describe("createCoverageSummaryCommandRunner", () => {
   it("returns success without writing summary when coverage reports argument is absent", () => {
     const commandRunner = createCoverageSummaryCommandRunner("{}")
 
-    const commandResult = commandRunner.run("vitest", ["related", "src/missing.ts"], "/repository")
+    const commandResult = commandRunner.run("vitest", ["--run", "--coverage.include=src/missing.ts"], "/repository")
 
     expect(commandResult).toStrictEqual({
       status: 0,

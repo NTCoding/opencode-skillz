@@ -2,6 +2,11 @@ name: Pull request checks
 
 on:
   pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
     branches:
       - main
 
@@ -13,6 +18,21 @@ permissions:
   contents: read
 
 jobs:
+  semantic-pr-title:
+    name: semantic PR title
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          SEMANTIC_TITLE_PATTERN='^(feat|fix|refactor|perf|docs|test|build|ci|release|chore)\([^)]+\): .+'
+          if [[ ! "$PR_TITLE" =~ $SEMANTIC_TITLE_PATTERN ]]; then
+            printf 'Expected semantic commit title format <type>(<scope>): <short summary>. Got %s\n' "$PR_TITLE"
+            exit 1
+          fi
+
   lint:
     name: lint
     runs-on: ubuntu-latest
