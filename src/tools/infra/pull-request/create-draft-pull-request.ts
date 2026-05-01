@@ -83,7 +83,29 @@ function validateSemanticCommitTitles(repositoryRoot: string, commandRunner: Com
 }
 
 function readCurrentBranch(repositoryRoot: string, commandRunner: CommandRunner): string {
-  return runCommand(repositoryRoot, commandRunner, "git", ["branch", "--show-current"], "current branch discovery")
+  const branchName = runCommand(repositoryRoot, commandRunner, "git", ["branch", "--show-current"], "current branch discovery")
+
+  if (branchName) {
+    return branchName
+  }
+
+  throw new CreatePullRequestError("Expected current branch name to be non-empty. Got empty text.")
+}
+
+function isMissingUpstreamResult(commandResult: CommandRunResult): boolean {
+  if (commandResult.errorMessage) {
+    return false
+  }
+
+  return readCommandFailureMessage(commandResult).includes("no upstream")
+}
+
+function readUpstreamLookupFailureMessage(commandResult: CommandRunResult): string {
+  if (commandResult.errorMessage) {
+    return commandResult.errorMessage
+  }
+
+  return readCommandFailureMessage(commandResult)
 }
 
 function pushBranchWhenUpstreamIsMissing(repositoryRoot: string, commandRunner: CommandRunner, branchName: string): void {
@@ -91,6 +113,10 @@ function pushBranchWhenUpstreamIsMissing(repositoryRoot: string, commandRunner: 
 
   if (upstreamResult.status === 0) {
     return
+  }
+
+  if (!isMissingUpstreamResult(upstreamResult)) {
+    throw new CreatePullRequestError(`Expected upstream lookup to succeed or report missing upstream. Got ${readUpstreamLookupFailureMessage(upstreamResult)}.`)
   }
 
   runCommand(repositoryRoot, commandRunner, "git", ["push", "-u", "origin", branchName], "branch push")

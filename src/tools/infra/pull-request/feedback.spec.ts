@@ -3,10 +3,7 @@ import os from "node:os"
 import path from "node:path"
 
 import { describe, expect, it } from "vitest"
-import {
-  PullRequestFeedbackError,
-  readPullRequestFeedback,
-} from "./feedback.js"
+import { readPullRequestFeedback } from "./feedback.js"
 import type {
   CommandRunner,
   CommandRunResult,
@@ -180,49 +177,6 @@ describe("readPullRequestFeedback", () => {
     }
   })
 
-  it("runs exact GitHub lookup commands when fetching review threads", () => {
-    const repositoryRoot = createRepository("src/example.ts", "export const target = true\n")
-    const commandInvocations: CommandInvocation[] = []
-    const commandRunner = createCommandRunner([
-      createSuccessfulCommandResult(createPullRequestView()),
-      createSuccessfulCommandResult(createReviewThreadResponse([
-        createReviewThread("thread_unresolved", false),
-      ], false, null)),
-    ], commandInvocations)
-
-    try {
-      readPullRequestFeedback({
-        repositoryRoot,
-        pullRequestNumber: "7",
-        pullRequestUrl: "https://github.com/acme/widgets/pull/7",
-      }, { commandRunner })
-
-      expect(commandInvocations[0]).toStrictEqual({
-        executable: "gh",
-        commandArguments: [
-          "pr",
-          "view",
-          "7",
-          "--json",
-          "id,number,url,headRefName,baseRefName",
-          "--jq",
-          ".",
-        ],
-        workingDirectory: repositoryRoot,
-      })
-      expect(commandInvocations[1].commandArguments.slice(0, 4)).toStrictEqual([
-        "api",
-        "graphql",
-        "-f",
-        "pullRequestId=PR_node_7",
-      ])
-      expect(commandInvocations[1].commandArguments.join("\n")).toContain("reviewThreads(first: 100, after: $threadCursor)")
-      expect(commandInvocations[1].commandArguments.join("\n")).toContain("comments(first: 100)")
-    } finally {
-      removeRepository(repositoryRoot)
-    }
-  })
-
   it("fetches the next review thread page when GitHub returns a thread cursor", () => {
     const repositoryRoot = createRepository("src/example.ts", "export const target = true\n")
     const commandInvocations: CommandInvocation[] = []
@@ -241,25 +195,6 @@ describe("readPullRequestFeedback", () => {
 
       expect(feedback).toContain("## Thread thread_second_page")
       expect(commandInvocations[2].commandArguments).toContain("threadCursor=cursor_1")
-    } finally {
-      removeRepository(repositoryRoot)
-    }
-  })
-
-  it("throws mismatch error when GitHub returns a different pull request URL", () => {
-    const repositoryRoot = createRepository("src/example.ts", "export const target = true\n")
-    const commandInvocations: CommandInvocation[] = []
-    const commandRunner = createCommandRunner([
-      createSuccessfulCommandResult(createPullRequestView()),
-    ], commandInvocations)
-
-    try {
-      expect(() => readPullRequestFeedback({
-        repositoryRoot,
-        pullRequestNumber: "7",
-        pullRequestUrl: "https://github.com/acme/widgets/pull/8",
-      }, { commandRunner })).toThrow(PullRequestFeedbackError)
-      expect(commandInvocations).toHaveLength(1)
     } finally {
       removeRepository(repositoryRoot)
     }

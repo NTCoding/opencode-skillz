@@ -3,7 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
 
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { runPortableLintFromCommandLine } from "../../lint.js"
 
 async function createExtensionlessImportRepository(): Promise<string> {
@@ -37,16 +37,41 @@ async function createExtensionlessImportRepository(): Promise<string> {
 describe("runPortableLintFromCommandLine", () => {
   it("returns command line exit code without printing when lint output is empty", async () => {
     const repositoryRoot = await createExtensionlessImportRepository()
+    const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true)
+    const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
 
     try {
       await expect(runPortableLintFromCommandLine(["--repo", repositoryRoot, "src/command.ts"])).resolves.toBe(0)
+      expect(stdoutWrite).not.toHaveBeenCalled()
+      expect(stderrWrite).not.toHaveBeenCalled()
     } finally {
+      stdoutWrite.mockRestore()
+      stderrWrite.mockRestore()
       await rm(repositoryRoot, {
         recursive: true,
         force: true,
       })
     }
   }, 20_000)
+
+  it("prints command line help and returns success", async () => {
+    const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true)
+
+    try {
+      await expect(runPortableLintFromCommandLine(["--help"])).resolves.toBe(0)
+      expect(stdoutWrite).toHaveBeenCalledWith([
+        "Usage: ./scripts/lint-ts.sh [--repo PATH] [--base REF] [--head REF] [file ...]",
+        "",
+        "Examples:",
+        "  ./scripts/lint-ts.sh --repo ../living-architecture --base origin/main",
+        "  ./scripts/lint-ts.sh --repo ../living-architecture packages/example/src/example.ts",
+        "  ./scripts/lint-ts.sh src/example.ts",
+        "",
+      ].join("\n"))
+    } finally {
+      stdoutWrite.mockRestore()
+    }
+  })
 
   it("uses current working directory when repository argument is omitted", async () => {
     const repositoryRoot = await mkdtemp(path.join(os.tmpdir(), "nt-skillz-lint-current-directory-"))

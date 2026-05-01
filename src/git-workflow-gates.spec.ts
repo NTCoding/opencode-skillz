@@ -54,6 +54,38 @@ describe("createGitWorkflowGate", () => {
     ].join("\n"))
   })
 
+  it("blocks direct pull request creation when command sequence invokes gh pr create", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([], commandInvocations))
+
+    expect(() => gate.beforeToolExecution({
+      tool: "bash",
+    }, {
+      args: {
+        command: "npm test && gh pr create --draft",
+      },
+    })).toThrow([
+      "Direct gh pr create is banned for this workspace.",
+      "Use nt_skillz_create_pr instead.",
+    ].join("\n"))
+  })
+
+  it("blocks direct pull request creation when subshell invokes gh pr create", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([], commandInvocations))
+
+    expect(() => gate.beforeToolExecution({
+      tool: "bash",
+    }, {
+      args: {
+        command: "(gh pr create --draft)",
+      },
+    })).toThrow([
+      "Direct gh pr create is banned for this workspace.",
+      "Use nt_skillz_create_pr instead.",
+    ].join("\n"))
+  })
+
   it("blocks commit when staged TypeScript content has not been linted", () => {
     const commandInvocations: CommandInvocation[] = []
     const gate = createGitWorkflowGate("/repo", createCommandRunner([{
@@ -71,6 +103,56 @@ describe("createGitWorkflowGate", () => {
     }, {
       args: {
         command: "git commit -m 'feat(example): add example'",
+      },
+    })).toThrow([
+      "Commit blocked: TypeScript files changed without nt_skillz_lint validation.",
+      "Run nt_skillz_lint with files: [\"src/example.ts\"]",
+      "Then retry the commit.",
+    ].join("\n"))
+  })
+
+  it("blocks commit when command sequence invokes git commit", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([{
+      status: 0,
+      stdout: "src/example.ts\n",
+      stderr: "",
+    }, {
+      status: 0,
+      stdout: "typescript-blob-hash\n",
+      stderr: "",
+    }], commandInvocations))
+
+    expect(() => gate.beforeToolExecution({
+      tool: "bash",
+    }, {
+      args: {
+        command: "npm test && git commit -m 'feat(example): add example'",
+      },
+    })).toThrow([
+      "Commit blocked: TypeScript files changed without nt_skillz_lint validation.",
+      "Run nt_skillz_lint with files: [\"src/example.ts\"]",
+      "Then retry the commit.",
+    ].join("\n"))
+  })
+
+  it("blocks commit when environment-prefixed command invokes git commit", () => {
+    const commandInvocations: CommandInvocation[] = []
+    const gate = createGitWorkflowGate("/repo", createCommandRunner([{
+      status: 0,
+      stdout: "src/example.ts\n",
+      stderr: "",
+    }, {
+      status: 0,
+      stdout: "typescript-blob-hash\n",
+      stderr: "",
+    }], commandInvocations))
+
+    expect(() => gate.beforeToolExecution({
+      tool: "bash",
+    }, {
+      args: {
+        command: "GIT_AUTHOR_NAME=Test git commit -m 'feat(example): add example'",
       },
     })).toThrow([
       "Commit blocked: TypeScript files changed without nt_skillz_lint validation.",

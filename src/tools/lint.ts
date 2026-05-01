@@ -153,7 +153,8 @@ function runGitCommand(repositoryRoot: string, gitArguments: string[]): string {
     return gitResult.stdout
   }
 
-  throw new GitCommandError(`Expected git command to succeed. Got ${gitResult.stderr.trim()}.`)
+  const failureOutput = gitResult.stderr.trim() || gitResult.stdout.trim() || `exit status ${gitResult.status}`
+  throw new GitCommandError(`Expected git command to succeed. Got ${failureOutput}.`)
 }
 
 function readChangedTypeScriptFiles(repositoryRoot: string, baseReference: string, headReference: string): string[] {

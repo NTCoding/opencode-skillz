@@ -100,7 +100,7 @@ function ensureSuccessfulCommand(commandResult: CommandRunResult, commandDescrip
 }
 
 function parseJsonWithSchema<T>(jsonText: string, schema: z.ZodType<T>, commandDescription: string): T {
-  const parsedJson: unknown = JSON.parse(jsonText)
+  const parsedJson = parseJson(jsonText, commandDescription)
   const parsedResult = schema.safeParse(parsedJson)
 
   if (parsedResult.success) {
@@ -108,6 +108,14 @@ function parseJsonWithSchema<T>(jsonText: string, schema: z.ZodType<T>, commandD
   }
 
   throw new PullRequestFeedbackError(`Expected ${commandDescription} to return valid JSON. Got ${parsedResult.error.message}.`)
+}
+
+function parseJson(jsonText: string, commandDescription: string): unknown {
+  try {
+    return JSON.parse(jsonText)
+  } catch {
+    throw new PullRequestFeedbackError(`Expected ${commandDescription} to return JSON. Got malformed JSON.`)
+  }
 }
 
 function readPullRequestView(
@@ -267,8 +275,20 @@ function formatDiffHunk(diffHunk: string): string {
   return "No diff hunk returned by GitHub."
 }
 
+function resolveReviewThreadFilePath(repositoryRoot: string, filePath: string): string {
+  const absoluteRepositoryRoot = path.resolve(repositoryRoot)
+  const absoluteFilePath = path.resolve(absoluteRepositoryRoot, filePath)
+  const relativeFilePath = path.relative(absoluteRepositoryRoot, absoluteFilePath)
+
+  if (!relativeFilePath.startsWith("..") && !path.isAbsolute(relativeFilePath)) {
+    return absoluteFilePath
+  }
+
+  throw new PullRequestFeedbackError(`Expected review thread path to stay inside repository root. Got ${filePath}.`)
+}
+
 function readCodeExcerpt(repositoryRoot: string, filePath: string, lineNumber: number | null): string {
-  const absoluteFilePath = path.join(repositoryRoot, filePath)
+  const absoluteFilePath = resolveReviewThreadFilePath(repositoryRoot, filePath)
 
   if (!fs.existsSync(absoluteFilePath)) {
     return `Current local file not found: ${filePath}`

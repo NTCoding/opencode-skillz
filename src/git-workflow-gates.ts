@@ -56,11 +56,11 @@ function readCommandFailureMessage(commandResult: CommandRunResult): string {
 }
 
 function isDirectPullRequestCreation(commandText: string): boolean {
-  return /^gh\s+pr\s+create(?:\s|$)/.test(commandText)
+  return /(?:^|[;&|()]|\s)gh\s+pr\s+create(?:\s|$|[;&|()])/.test(commandText)
 }
 
 function isGitCommit(commandText: string): boolean {
-  return /^git\s+commit(?:\s|$)/.test(commandText)
+  return /(?:^|[;&|()]|\s)git\s+commit(?:\s|$|[;&|()])/.test(commandText)
 }
 
 function normalizeCommandOutput(commandResult: CommandRunResult, description: string): string {

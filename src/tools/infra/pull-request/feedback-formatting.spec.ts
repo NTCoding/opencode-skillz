@@ -101,8 +101,8 @@ describe("readPullRequestFeedback formatting", () => {
       ["src/example.jsx", "const jsxValue = true\n"],
       ["src/example.json", "{\"enabled\":true}\n"],
       ["src/example.md", "# Example\n"],
-      ["src/example.yml", "enabled: true\n"],
-      ["src/example.yaml", "enabled: true\n"],
+      ["src/example.yml", "shortYaml: true\n"],
+      ["src/example.yaml", "longYaml: true\n"],
       ["src/example.txt", "plain text\n"],
     ]
     for (const [filePath, content] of files) {
@@ -131,14 +131,25 @@ describe("readPullRequestFeedback formatting", () => {
         pullRequestUrl: "https://github.com/acme/widgets/pull/7",
       }, { commandRunner })
 
-      expect([
-        feedback.includes("```js\n1: const javascriptValue = true"),
-        feedback.includes("```json\n1: {\"enabled\":true}"),
-        feedback.includes("```md\n1: # Example"),
-        feedback.includes("```yaml\n1: enabled: true"),
-        feedback.includes("```text\n1: plain text"),
-        feedback.includes("No current line number returned by GitHub."),
-      ]).toStrictEqual([true, true, true, true, true, true])
+      const expectedFeedbackFragments = [
+        "## Thread src/example.js",
+        "```js\n1: const javascriptValue = true",
+        "## Thread src/example.jsx",
+        "```js\n1: const jsxValue = true",
+        "## Thread src/example.json",
+        "```json\n1: {\"enabled\":true}",
+        "## Thread src/example.md",
+        "```md\n1: # Example",
+        "## Thread src/example.yml",
+        "```yaml\n1: shortYaml: true",
+        "## Thread src/example.yaml",
+        "```yaml\n1: longYaml: true",
+        "## Thread src/example.txt",
+        "```text\n1: plain text",
+        "No current line number returned by GitHub.",
+      ]
+
+      expect(expectedFeedbackFragments.map((feedbackFragment) => feedback.includes(feedbackFragment))).toStrictEqual(expectedFeedbackFragments.map(() => true))
     } finally {
       removeRepository(repositoryRoot)
     }

@@ -14,6 +14,12 @@ class MissingRegistryToolError extends Error {
   }
 }
 
+class MissingToolExecutionBeforeHookError extends Error {
+  constructor() {
+    super("Expected registry tool execution before hook.")
+  }
+}
+
 function createPluginRoot(): string {
   const pluginRoot = fs.mkdtempSync(path.join(os.tmpdir(), "nt-skillz-plugin-root-"))
   fs.mkdirSync(path.join(pluginRoot, "commands"))
@@ -92,9 +98,13 @@ describe("createPluginRegistry lint tool", () => {
     }, pluginRoot)
     const metadataCalls: Array<Record<string, unknown>> = []
     const lintToolDefinition = registry.tool?.[LINT_TOOL_NAME]
+    const toolExecutionBeforeHook = registry["tool.execute.before"]
 
     try {
       if (!lintToolDefinition?.execute) throw new MissingRegistryToolError()
+      if (!toolExecutionBeforeHook) throw new MissingToolExecutionBeforeHookError()
+
+      fs.appendFileSync(path.join(repositoryRoot, "src", "command.ts"), "\nexport const changedCommandName = \"changed\"\n")
 
       const result = await lintToolDefinition.execute({
         files: ["src/command.ts"],
@@ -113,6 +123,15 @@ describe("createPluginRegistry lint tool", () => {
           metadataCalls.push(metadata)
         },
       })
+      runGit(repositoryRoot, ["add", "src/command.ts"])
+
+      await expect(toolExecutionBeforeHook({
+        tool: "bash",
+      }, {
+        args: {
+          command: "git commit -m 'feat(test): change command'",
+        },
+      })).resolves.toBeUndefined()
 
       expect(result.output).toBe("Lint passed.")
       expect(currentResult.output).toBe("No TypeScript files matched.")

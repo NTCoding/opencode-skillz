@@ -261,4 +261,88 @@ describe("createDraftPullRequest", () => {
       stderr: "",
     }], commandInvocations))).toThrow("Expected working tree status check to succeed. Got exit status 1.")
   })
+
+  it("throws branch validation error when current branch is empty", () => {
+    const commandInvocations: CommandInvocation[] = []
+
+    expect(() => createDraftPullRequest("/repo", {
+      base: "main",
+      title: "feat(gates): enforce OpenCode workflow gates",
+      problem: "Agents can bypass the documented pull request workflow.",
+      solution: "Pull request creation goes through a validating tool.",
+      acceptanceCriteria: "Pull requests are created as drafts with required sections.",
+      architectureAndSoftwareDesign: "The plugin exposes a guarded pull request creation tool.",
+    }, createCommandRunner([{
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }, {
+      status: 0,
+      stdout: "feat(gates): enforce OpenCode workflow gates\n",
+      stderr: "",
+    }, {
+      status: 0,
+      stdout: "\n",
+      stderr: "",
+    }], commandInvocations))).toThrow("Expected current branch name to be non-empty. Got empty text.")
+  })
+
+  it("throws upstream lookup error when git cannot read upstream", () => {
+    const commandInvocations: CommandInvocation[] = []
+
+    expect(() => createDraftPullRequest("/repo", {
+      base: "main",
+      title: "feat(gates): enforce OpenCode workflow gates",
+      problem: "Agents can bypass the documented pull request workflow.",
+      solution: "Pull request creation goes through a validating tool.",
+      acceptanceCriteria: "Pull requests are created as drafts with required sections.",
+      architectureAndSoftwareDesign: "The plugin exposes a guarded pull request creation tool.",
+    }, createCommandRunner([{
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }, {
+      status: 0,
+      stdout: "feat(gates): enforce OpenCode workflow gates\n",
+      stderr: "",
+    }, {
+      status: 0,
+      stdout: "feature/workflow-gates\n",
+      stderr: "",
+    }, {
+      status: null,
+      stdout: "",
+      stderr: "",
+      errorMessage: "spawn failed",
+    }], commandInvocations))).toThrow("Expected upstream lookup to succeed or report missing upstream. Got spawn failed.")
+  })
+
+  it("throws upstream lookup error when git reports an unrelated failure", () => {
+    const commandInvocations: CommandInvocation[] = []
+
+    expect(() => createDraftPullRequest("/repo", {
+      base: "main",
+      title: "feat(gates): enforce OpenCode workflow gates",
+      problem: "Agents can bypass the documented pull request workflow.",
+      solution: "Pull request creation goes through a validating tool.",
+      acceptanceCriteria: "Pull requests are created as drafts with required sections.",
+      architectureAndSoftwareDesign: "The plugin exposes a guarded pull request creation tool.",
+    }, createCommandRunner([{
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }, {
+      status: 0,
+      stdout: "feat(gates): enforce OpenCode workflow gates\n",
+      stderr: "",
+    }, {
+      status: 0,
+      stdout: "feature/workflow-gates\n",
+      stderr: "",
+    }, {
+      status: 128,
+      stdout: "",
+      stderr: "fatal: not a git repository",
+    }], commandInvocations))).toThrow("Expected upstream lookup to succeed or report missing upstream. Got fatal: not a git repository.")
+  })
 })

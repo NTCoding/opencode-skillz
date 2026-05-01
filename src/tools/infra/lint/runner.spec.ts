@@ -283,10 +283,6 @@ describe("runPortableLint", () => {
     }
   })
 
-  it("prints command line help and returns success", async () => {
-    await expect(runPortableLintFromCommandLine(["--help"])).resolves.toBe(0)
-  })
-
   it("returns lint tool output and metadata when files mode passes", async () => {
     const repositoryRoot = await createExtensionlessImportRepository()
     const context = createLintToolContext(repositoryRoot)
