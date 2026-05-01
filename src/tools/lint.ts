@@ -223,7 +223,7 @@ function removeAnsiEscapeSequences(value: string): string {
   return value.replaceAll(ansiEscapeSequencePattern, "")
 }
 
-function prependLintFailureGuidance(formattedOutput: string, errorCount: number, lintFailureGuidance: string): string {
+export function prependLintFailureGuidance(formattedOutput: string, errorCount: number, lintFailureGuidance: string): string {
   if (errorCount === 0) {
     return formattedOutput
   }

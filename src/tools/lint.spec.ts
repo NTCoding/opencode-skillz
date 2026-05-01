@@ -5,7 +5,7 @@ import path from "node:path"
 import { spawnSync } from "node:child_process"
 
 import { describe, expect, it, vi } from "vitest"
-import { lintTool, runPortableLint, runPortableLintFromCommandLine } from "./lint.js"
+import { lintTool, prependLintFailureGuidance, runPortableLint, runPortableLintFromCommandLine } from "./lint.js"
 
 interface LintToolContext {
   worktree: string
@@ -80,6 +80,10 @@ async function createExtensionlessImportRepository(): Promise<string> {
 }
 
 describe("runPortableLint", () => {
+  it("returns lint guidance when lint failure has no formatted output", () => {
+    expect(prependLintFailureGuidance("", 1, "Fix lint failure.")).toBe("Fix lint failure.")
+  })
+
   it("returns success when local TypeScript import omits extension", async () => {
     const repositoryRoot = await createExtensionlessImportRepository()
 

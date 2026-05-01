@@ -37,6 +37,7 @@ export function installGitHooks(repositoryRoot = process.cwd()) {
     '#!/usr/bin/env bash',
     'set -euo pipefail',
     'npm run lint',
+    'npm run coverage',
     '',
   ].join('\n'), { mode: 0o755 })
   return true

@@ -60,7 +60,7 @@ describe("installGitHooks", () => {
       fs.mkdirSync(path.join(repositoryRoot, ".git"))
 
       expect(installGitHooks(repositoryRoot)).toBe(true)
-      expect(readHookContent(repositoryRoot)).toBe("#!/usr/bin/env bash\nset -euo pipefail\nnpm run lint\n")
+      expect(readHookContent(repositoryRoot)).toBe("#!/usr/bin/env bash\nset -euo pipefail\nnpm run lint\nnpm run coverage\n")
     } finally {
       removeRepository(repositoryRoot)
     }
@@ -74,7 +74,7 @@ describe("installGitHooks", () => {
       fs.writeFileSync(path.join(repositoryRoot, ".git"), "gitdir: actual-git-directory\n")
 
       expect(installGitHooks(repositoryRoot)).toBe(true)
-      expect(fs.readFileSync(path.join(repositoryRoot, "actual-git-directory", "hooks", "pre-commit"), "utf8")).toContain("npm run lint")
+      expect(fs.readFileSync(path.join(repositoryRoot, "actual-git-directory", "hooks", "pre-commit"), "utf8")).toContain("npm run coverage")
     } finally {
       removeRepository(repositoryRoot)
     }
