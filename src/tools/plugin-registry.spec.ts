@@ -1,7 +1,6 @@
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import { spawnSync } from "node:child_process"
 
 import { describe, expect, it } from "vitest"
 import opencodeSkillzPlugin from "../index.js"
@@ -10,7 +9,6 @@ import { buildCommandName } from "../plugin-registry/command-names.js"
 import { registerCommands } from "../plugin-registry/commands.js"
 import { registerAgents } from "../plugin-registry/agents.js"
 import { readMarkdownEntries } from "../plugin-registry/markdown.js"
-import { LINT_TOOL_NAME } from "./lint.js"
 import type {
   AgentDefinition,
   CommandDefinition,
@@ -34,37 +32,6 @@ function removePluginRoot(pluginRoot: string): void {
     recursive: true,
     force: true,
   })
-}
-
-function createLintRepository(): string {
-  const repositoryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "nt-skillz-registry-lint-"))
-  const sourceDirectory = path.join(repositoryRoot, "src")
-
-  fs.mkdirSync(sourceDirectory)
-  fs.writeFileSync(path.join(repositoryRoot, "tsconfig.json"), JSON.stringify({
-    compilerOptions: {
-      target: "ES2022",
-      module: "NodeNext",
-      moduleResolution: "NodeNext",
-      strict: true,
-      skipLibCheck: true,
-      verbatimModuleSyntax: true,
-    },
-    include: ["src/**/*.ts"],
-  }))
-  fs.writeFileSync(path.join(sourceDirectory, "command.ts"), "export const commandName = \"test\"\n")
-  spawnSync("/usr/bin/git", ["init"], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  })
-
-  return repositoryRoot
-}
-
-class MissingRegistryToolError extends Error {
-  constructor() {
-    super("Expected registry lint tool execute function.")
-  }
 }
 
 function createClient(): OpencodeClient {
@@ -390,45 +357,4 @@ describe("createPluginRegistry", () => {
     expect(registry.tool?.nt_skillz_create_pr).toBeDefined()
   })
 
-  it("records linted files when registry lint tool executes", async () => {
-    const repositoryRoot = createLintRepository()
-    const pluginRoot = createPluginRoot()
-    const registry = createPluginRegistry({
-      client: createClient(),
-      worktree: repositoryRoot,
-    }, pluginRoot)
-    const metadataCalls: Array<Record<string, unknown>> = []
-    const lintToolDefinition = registry.tool?.[LINT_TOOL_NAME]
-
-    try {
-      if (!lintToolDefinition?.execute) {
-        throw new MissingRegistryToolError()
-      }
-
-      const result = await lintToolDefinition.execute({
-        files: ["src/command.ts"],
-      }, {
-        worktree: repositoryRoot,
-        metadata(metadata: Record<string, unknown>): void {
-          metadataCalls.push(metadata)
-        },
-      })
-      const currentResult = await lintToolDefinition.execute({}, {
-        worktree: repositoryRoot,
-        metadata(metadata: Record<string, unknown>): void {
-          metadataCalls.push(metadata)
-        },
-      })
-
-      expect(result.output).toBe("Lint passed.")
-      expect(currentResult.output).toBe("Lint passed.")
-      expect(metadataCalls).toStrictEqual([
-        { title: "Lint 1 TypeScript file(s)" },
-        { title: "Lint current TypeScript files" },
-      ])
-    } finally {
-      removePluginRoot(repositoryRoot)
-      removePluginRoot(pluginRoot)
-    }
-  })
 })

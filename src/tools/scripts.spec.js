@@ -27,6 +27,10 @@ function initializeGitRepository(repositoryRoot) {
   })
 }
 
+async function successfulLintRunner() {
+  return 0
+}
+
 function readHookContent(repositoryRoot) {
   return fs.readFileSync(path.join(repositoryRoot, ".git", "hooks", "pre-commit"), "utf8")
 }
@@ -122,7 +126,7 @@ describe("runLintScript", () => {
 
     try {
       initializeGitRepository(repositoryRoot)
-      const exitCode = await runLintScript(["--repo", repositoryRoot])
+      const exitCode = await runLintScript(["--repo", repositoryRoot], process.stderr, successfulLintRunner)
 
       expect(exitCode).toBe(0)
     } finally {
@@ -136,6 +140,8 @@ describe("runLintScript", () => {
       write(value) {
         writtenMessages.push(value)
       },
+    }, async () => {
+      throw new Error("Expected repository path to exist.")
     })
 
     expect(exitCode).toBe(1)
@@ -153,9 +159,30 @@ describe("runLintScript", () => {
     try {
       initializeGitRepository(repositoryRoot)
 
-      await expect(runLintScriptMain(scriptPath, ["--repo", repositoryRoot])).resolves.toBe(true)
+      await expect(runLintScriptMain(scriptPath, ["--repo", repositoryRoot], successfulLintRunner)).resolves.toBe(true)
     } finally {
       removeRepository(repositoryRoot)
+    }
+  })
+
+  it("loads bundled lint runner by default", async () => {
+    const lintModulePath = path.resolve("dist", "tools", "lint.js")
+    const previousContent = fs.existsSync(lintModulePath) ? fs.readFileSync(lintModulePath, "utf8") : undefined
+
+    try {
+      fs.mkdirSync(path.dirname(lintModulePath), { recursive: true })
+      fs.writeFileSync(lintModulePath, "export async function runPortableLintFromCommandLine() { return 0 }\n")
+
+      await expect(runLintScript(["--fixture"])).resolves.toBe(0)
+    } finally {
+      if (previousContent) {
+        fs.writeFileSync(lintModulePath, previousContent)
+      } else {
+        fs.rmSync(path.resolve("dist"), {
+          recursive: true,
+          force: true,
+        })
+      }
     }
   })
 

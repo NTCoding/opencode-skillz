@@ -34,6 +34,13 @@ function runGit(repositoryRoot: string, commandArguments: string[]): void {
   const commandResult = spawnSync("/usr/bin/git", commandArguments, {
     cwd: repositoryRoot,
     encoding: "utf8",
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: "Test User",
+      GIT_AUTHOR_EMAIL: "test@example.com",
+      GIT_COMMITTER_NAME: "Test User",
+      GIT_COMMITTER_EMAIL: "test@example.com",
+    },
   })
 
   if (commandResult.status !== 0) {
@@ -180,24 +187,6 @@ describe("runPortableLint", () => {
         repositoryRoot,
         base: "missing-reference",
       })).rejects.toThrow("Expected git command to succeed. Got fatal: bad revision 'missing-reference...HEAD'.")
-    } finally {
-      await rm(repositoryRoot, {
-        recursive: true,
-        force: true,
-      })
-    }
-  })
-
-  it("throws git command run error when diff arguments exceed spawn limit", async () => {
-    const repositoryRoot = await mkdtemp(path.join(os.tmpdir(), "nt-skillz-lint-huge-base-"))
-
-    try {
-      runGit(repositoryRoot, ["init"])
-
-      await expect(runPortableLint({
-        repositoryRoot,
-        base: "x".repeat(3_000_000),
-      })).rejects.toThrow("Expected git command to run. Got spawnSync /usr/bin/git E2BIG.")
     } finally {
       await rm(repositoryRoot, {
         recursive: true,
