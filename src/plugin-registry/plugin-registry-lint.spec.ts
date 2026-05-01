@@ -4,8 +4,8 @@ import path from "node:path"
 import { spawnSync } from "node:child_process"
 
 import { describe, expect, it } from "vitest"
-import { createPluginRegistry } from "../plugin-registry/index.js"
-import { LINT_TOOL_NAME } from "./lint.js"
+import { createPluginRegistry } from "./index.js"
+import { LINT_TOOL_NAME } from "../tools/lint.js"
 import type { OpencodeClient } from "../types.js"
 
 class MissingRegistryToolError extends Error {

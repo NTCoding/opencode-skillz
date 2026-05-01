@@ -5,7 +5,7 @@ import {
   type CommandRunResult,
   PullRequestFileResolutionError,
   resolvePullRequestChangedFiles,
-} from "./pull-request-files.js"
+} from "./changed-files.js"
 
 interface CommandInvocation {
   executable: string

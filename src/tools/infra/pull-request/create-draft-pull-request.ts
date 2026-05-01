@@ -1,7 +1,7 @@
 import type {
   CommandRunner,
   CommandRunResult,
-} from "../git-workflow-gates.js"
+} from "../../../git-workflow-gates.js"
 
 export const CREATE_PULL_REQUEST_TOOL_NAME = "nt_skillz_create_pr"
 

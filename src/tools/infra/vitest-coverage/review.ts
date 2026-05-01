@@ -6,11 +6,11 @@ import {
   childProcessCommandRunner,
   type CommandRunner,
   resolvePullRequestChangedFiles,
-} from "./pull-request-files.js"
+} from "../source-control/changed-files.js"
 import {
   type CoverageCommandSpec,
   createVitestCoverageCommandSpec,
-} from "./vitest-coverage-command.js"
+} from "./command.js"
 
 export const VITEST_COVERAGE_TOOL_NAME = "nt_skillz_vitest_coverage"
 

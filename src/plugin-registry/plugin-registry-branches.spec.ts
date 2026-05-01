@@ -3,8 +3,8 @@ import os from "node:os"
 import path from "node:path"
 
 import { describe, expect, it } from "vitest"
-import { registerCommands } from "../plugin-registry/commands.js"
-import { readMarkdownEntries } from "../plugin-registry/markdown.js"
+import { registerCommands } from "./commands.js"
+import { readMarkdownEntries } from "./markdown.js"
 import type { CommandDefinition } from "../types.js"
 
 function createPluginRoot(): string {

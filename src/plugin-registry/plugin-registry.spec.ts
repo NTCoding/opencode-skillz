@@ -4,11 +4,11 @@ import path from "node:path"
 
 import { describe, expect, it } from "vitest"
 import opencodeSkillzPlugin from "../index.js"
-import { createPluginRegistry } from "../plugin-registry/index.js"
-import { buildCommandName } from "../plugin-registry/command-names.js"
-import { registerCommands } from "../plugin-registry/commands.js"
-import { registerAgents } from "../plugin-registry/agents.js"
-import { readMarkdownEntries } from "../plugin-registry/markdown.js"
+import { createPluginRegistry } from "./index.js"
+import { buildCommandName } from "./command-names.js"
+import { registerCommands } from "./commands.js"
+import { registerAgents } from "./agents.js"
+import { readMarkdownEntries } from "./markdown.js"
 import type {
   AgentDefinition,
   CommandDefinition,

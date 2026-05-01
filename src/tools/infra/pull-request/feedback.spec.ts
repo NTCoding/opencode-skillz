@@ -6,11 +6,11 @@ import { describe, expect, it } from "vitest"
 import {
   PullRequestFeedbackError,
   readPullRequestFeedback,
-} from "./pull-request-feedback.js"
+} from "./feedback.js"
 import type {
   CommandRunner,
   CommandRunResult,
-} from "./pull-request-files.js"
+} from "../source-control/changed-files.js"
 
 interface CommandInvocation {
   executable: string

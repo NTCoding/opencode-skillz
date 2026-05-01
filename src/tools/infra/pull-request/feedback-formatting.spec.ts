@@ -3,11 +3,11 @@ import os from "node:os"
 import path from "node:path"
 
 import { describe, expect, it } from "vitest"
-import { readPullRequestFeedback } from "./pull-request-feedback.js"
+import { readPullRequestFeedback } from "./feedback.js"
 import type {
   CommandRunner,
   CommandRunResult,
-} from "./pull-request-files.js"
+} from "../source-control/changed-files.js"
 
 function createRepository(filePath: string, fileContent: string): string {
   const repositoryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "nt-skillz-pr-feedback-formatting-"))

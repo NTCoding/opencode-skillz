@@ -10,9 +10,9 @@ import {
   tool,
   type ToolDefinition,
 } from "@opencode-ai/plugin"
-import { createLintFailureGuidance } from "./lint-guidance.js"
-import { childProcessCommandRunner } from "./pull-request-files.js"
-import { runPrReviewLint } from "./lint-review.js"
+import { createLintFailureGuidance } from "./infra/lint/guidance.js"
+import { childProcessCommandRunner } from "./infra/source-control/changed-files.js"
+import { runPrReviewLint } from "./infra/lint/review.js"
 
 class UsageError extends Error {
   constructor(message: string) {

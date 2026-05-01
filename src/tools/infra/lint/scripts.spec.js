@@ -5,9 +5,16 @@ import { spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 
 import { describe, expect, it } from "vitest"
-import { installGitHooks, runInstallGitHooksScript } from "../../scripts/install-git-hooks.mjs"
-import { readErrorMessage, runLintScript, runLintScriptMain } from "../../scripts/lint-ts.mjs"
-import noGenericNames from "../../scripts/no-generic-names-eslint-rule.mjs"
+import {
+  formatToolsFolderBoundaryViolations,
+  isTopLevelToolsTypeScriptFile,
+  readToolsFolderBoundaryViolations,
+  runToolsFolderBoundaryCheck,
+  runToolsFolderBoundaryScriptMain,
+} from "../../../../scripts/check-tools-folder-boundary.mjs"
+import { installGitHooks, runInstallGitHooksScript } from "../../../../scripts/install-git-hooks.mjs"
+import { readErrorMessage, runLintScript, runLintScriptMain } from "../../../../scripts/lint-ts.mjs"
+import noGenericNames from "../../../../scripts/no-generic-names-eslint-rule.mjs"
 
 function createRepository() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "nt-skillz-script-test-"))
@@ -33,6 +40,12 @@ async function successfulLintRunner() {
 
 function readHookContent(repositoryRoot) {
   return fs.readFileSync(path.join(repositoryRoot, ".git", "hooks", "pre-commit"), "utf8")
+}
+
+function writeRepositoryFile(repositoryRoot, filePath, fileContent) {
+  const absoluteFilePath = path.join(repositoryRoot, filePath)
+  fs.mkdirSync(path.dirname(absoluteFilePath), { recursive: true })
+  fs.writeFileSync(absoluteFilePath, fileContent)
 }
 
 function collectReports(filename, rule = noGenericNames) {
@@ -111,11 +124,116 @@ describe("installGitHooks", () => {
 
     try {
       fs.mkdirSync(path.join(repositoryRoot, ".git"))
-      const scriptPath = fileURLToPath(new URL("../../scripts/install-git-hooks.mjs", import.meta.url))
+      const scriptPath = fileURLToPath(new URL("../../../../scripts/install-git-hooks.mjs", import.meta.url))
 
       expect(runInstallGitHooksScript(scriptPath, repositoryRoot)).toBe(true)
     } finally {
       removeRepository(repositoryRoot)
+    }
+  })
+})
+
+describe("checkToolsFolderBoundary", () => {
+  it("returns no violations when src tools directory is missing", () => {
+    const repositoryRoot = createRepository()
+
+    try {
+      expect(readToolsFolderBoundaryViolations(repositoryRoot)).toStrictEqual([])
+    } finally {
+      removeRepository(repositoryRoot)
+    }
+  })
+
+  it("recognizes only top-level TypeScript files in src tools", () => {
+    const repositoryRoot = createRepository()
+
+    try {
+      expect(isTopLevelToolsTypeScriptFile(repositoryRoot, path.join(repositoryRoot, "src/tools/lint.ts"))).toBe(true)
+      expect(isTopLevelToolsTypeScriptFile(repositoryRoot, path.join(repositoryRoot, "src/tools/infra/lint/guidance.ts"))).toBe(false)
+      expect(isTopLevelToolsTypeScriptFile(repositoryRoot, path.join(repositoryRoot, "src/tools/tsconfig.json"))).toBe(false)
+    } finally {
+      removeRepository(repositoryRoot)
+    }
+  })
+
+  it("reports top-level tools files that are not real OpenCode tools", () => {
+    const repositoryRoot = createRepository()
+
+    try {
+      writeRepositoryFile(repositoryRoot, "src/tools/valid-tool.ts", [
+        'import { tool, type ToolDefinition } from "@opencode-ai/plugin"',
+        'export const validTool: ToolDefinition = tool({})',
+      ].join("\n"))
+      writeRepositoryFile(repositoryRoot, "src/tools/fake-tool.ts", "export const fakeTool = {}")
+      writeRepositoryFile(repositoryRoot, "src/tools/typed-fake-tool.ts", [
+        'import type { ToolDefinition } from "@opencode-ai/plugin"',
+        'export const fakeTool: ToolDefinition = {}',
+      ].join("\n"))
+      writeRepositoryFile(repositoryRoot, "src/tools/no-call-tool.ts", [
+        'import { type ToolDefinition } from "@opencode-ai/plugin"',
+        'export const fakeTool: ToolDefinition = createTool()',
+      ].join("\n"))
+      writeRepositoryFile(repositoryRoot, "src/tools/infra/source-control/changed-files.ts", "export const changedFiles = []")
+
+      expect(readToolsFolderBoundaryViolations(repositoryRoot)).toStrictEqual([
+        "src/tools/fake-tool.ts",
+        "src/tools/no-call-tool.ts",
+        "src/tools/typed-fake-tool.ts",
+      ])
+    } finally {
+      removeRepository(repositoryRoot)
+    }
+  })
+
+  it("formats boundary violations", () => {
+    expect(formatToolsFolderBoundaryViolations([])).toBe("")
+    expect(formatToolsFolderBoundaryViolations(["src/tools/fake-tool.ts"])).toBe([
+      "Top-level src/tools files must export a real OpenCode ToolDefinition. Move support code to src/tools/infra/<concept>/. Renaming a support file to *-tool.ts is not valid.",
+      "- src/tools/fake-tool.ts",
+    ].join("\n"))
+  })
+
+  it("writes violations and returns failure code", () => {
+    const repositoryRoot = createRepository()
+    const writes = []
+
+    try {
+      writeRepositoryFile(repositoryRoot, "src/tools/fake-tool.ts", "export const fakeTool = {}")
+
+      expect(runToolsFolderBoundaryCheck(repositoryRoot, { write: (message) => writes.push(message) })).toBe(1)
+      expect(writes).toStrictEqual([[
+        "Top-level src/tools files must export a real OpenCode ToolDefinition. Move support code to src/tools/infra/<concept>/. Renaming a support file to *-tool.ts is not valid.",
+        "- src/tools/fake-tool.ts",
+        "",
+      ].join("\n")])
+    } finally {
+      removeRepository(repositoryRoot)
+    }
+  })
+
+  it("returns success code when no boundary violations exist", () => {
+    const repositoryRoot = createRepository()
+
+    try {
+      expect(runToolsFolderBoundaryCheck(repositoryRoot, { write: () => undefined })).toBe(0)
+    } finally {
+      removeRepository(repositoryRoot)
+    }
+  })
+
+  it("does not run script main when imported", async () => {
+    await expect(runToolsFolderBoundaryScriptMain("/not/current/script.mjs")).resolves.toBe(false)
+  })
+
+  it("runs script main when current script matches", async () => {
+    const scriptPath = fileURLToPath(new URL("../../../../scripts/check-tools-folder-boundary.mjs", import.meta.url))
+    const previousExitCode = process.exitCode
+
+    try {
+      await expect(runToolsFolderBoundaryScriptMain(scriptPath)).resolves.toBe(true)
+      expect(process.exitCode).toBe(0)
+    } finally {
+      process.exitCode = previousExitCode
     }
   })
 })
@@ -154,7 +272,7 @@ describe("runLintScript", () => {
 
   it("runs lint entrypoint when current script path matches", async () => {
     const repositoryRoot = createRepository()
-    const scriptPath = fileURLToPath(new URL("../../scripts/lint-ts.mjs", import.meta.url))
+    const scriptPath = fileURLToPath(new URL("../../../../scripts/lint-ts.mjs", import.meta.url))
 
     try {
       initializeGitRepository(repositoryRoot)
@@ -297,7 +415,7 @@ describe("noGenericNames", () => {
   })
 
   it("loads a fresh rule module and reports generic names", async () => {
-    const moduleUrl = new URL("../../scripts/no-generic-names-eslint-rule.mjs", import.meta.url)
+    const moduleUrl = new URL("../../../../scripts/no-generic-names-eslint-rule.mjs", import.meta.url)
     const { default: freshRule } = await import(`${moduleUrl.href}?coverage=${Date.now()}`)
     const { reports, listener } = collectReports("service.ts", freshRule)
 
@@ -311,7 +429,7 @@ describe("noGenericNames", () => {
   })
 
   it("loads a fresh rule module and ignores specific names", async () => {
-    const moduleUrl = new URL("../../scripts/no-generic-names-eslint-rule.mjs", import.meta.url)
+    const moduleUrl = new URL("../../../../scripts/no-generic-names-eslint-rule.mjs", import.meta.url)
     const { default: freshRule } = await import(`${moduleUrl.href}?specific=${Date.now()}`)
     const { reports, listener } = collectReports("order-total.ts", freshRule)
 
@@ -324,7 +442,7 @@ describe("noGenericNames", () => {
   })
 
   it("loads a fresh rule module and ignores empty filenames", async () => {
-    const moduleUrl = new URL("../../scripts/no-generic-names-eslint-rule.mjs", import.meta.url)
+    const moduleUrl = new URL("../../../../scripts/no-generic-names-eslint-rule.mjs", import.meta.url)
     const { default: freshRule } = await import(`${moduleUrl.href}?empty=${Date.now()}`)
     const { reports, listener } = collectReports("", freshRule)
 
@@ -337,7 +455,7 @@ describe("noGenericNames", () => {
 describe("livingArchitectureEslintConfig", () => {
   it("loads config when lint repository root is available", async () => {
     process.env.NT_SKILLZ_LINT_REPO_ROOT = process.cwd()
-    const moduleUrl = new URL("../../scripts/living-architecture-eslint.config.mjs", import.meta.url)
+    const moduleUrl = new URL("../../../../scripts/living-architecture-eslint.config.mjs", import.meta.url)
 
     const { default: lintConfig } = await import(`${moduleUrl.href}?root=${Date.now()}`)
 
@@ -347,7 +465,7 @@ describe("livingArchitectureEslintConfig", () => {
   it("throws when lint repository root is missing", async () => {
     const previousRoot = process.env.NT_SKILLZ_LINT_REPO_ROOT
     delete process.env.NT_SKILLZ_LINT_REPO_ROOT
-    const moduleUrl = new URL("../../scripts/living-architecture-eslint.config.mjs", import.meta.url)
+    const moduleUrl = new URL("../../../../scripts/living-architecture-eslint.config.mjs", import.meta.url)
 
     try {
       await expect(import(`${moduleUrl.href}?missing-root=${Date.now()}`))

@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
-import { runVitestCoverageReview } from "./vitest-coverage.js"
+import { runVitestCoverageReview } from "./review.js"
 import {
   createCoverageCommandRunner,
   createCoverageErrorCommandRunner,
@@ -11,7 +11,7 @@ import {
   createRepositoryWithoutPackage,
   createRepositoryWithoutVitest,
   removeDirectory,
-} from "./vitest-coverage-test-support.js"
+} from "./test-support.js"
 
 describe("runVitestCoverageReview errors", () => {
   it("rejects invalid coverage mode", async () => {

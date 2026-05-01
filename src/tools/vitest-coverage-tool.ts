@@ -5,7 +5,7 @@ import {
 import {
   runVitestCoverageReview,
   VITEST_COVERAGE_TOOL_NAME,
-} from "./vitest-coverage.js"
+} from "./infra/vitest-coverage/review.js"
 
 export const vitestCoverageTool: ToolDefinition = tool({
   description: "Run Vitest coverage for changed TypeScript source files.",

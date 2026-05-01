@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest"
-import { createDontStopHooks } from "../commands/dont-stop/index.js"
+import { createDontStopHooks } from "./index.js"
 import {
   CLEAR_DONT_STOP_COMMAND_NAME,
   DONT_STOP_COMMAND_NAME,
   registerDontStopCommands,
-} from "../commands/dont-stop/register.js"
-import { createDontStopState } from "../commands/dont-stop/state.js"
+} from "./register.js"
+import { createDontStopState } from "./state.js"
 import type {
   CommandDefinition,
   OpencodeClient,
   SessionEvent,
   ToastBody,
-} from "../types.js"
+} from "../../types.js"
 
 interface DontStopClient extends OpencodeClient {
   prompts: string[]

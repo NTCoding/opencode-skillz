@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createLintFailureGuidance } from "./lint-guidance.js"
+import { createLintFailureGuidance } from "./guidance.js"
 
 describe("createLintFailureGuidance", () => {
   it("returns generic guidance when lint rule has no targeted guidance", () => {

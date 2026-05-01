@@ -4,7 +4,7 @@ import path from "node:path"
 import type {
   CommandRunner,
   CommandRunResult,
-} from "./pull-request-files.js"
+} from "../source-control/changed-files.js"
 
 export interface CapturedCoverageRun {
   executable: string

@@ -4,7 +4,7 @@ import path from "node:path"
 import { spawnSync } from "node:child_process"
 
 import { describe, expect, it } from "vitest"
-import { runPortableLint } from "./lint.js"
+import { runPortableLint } from "../../lint.js"
 
 async function createGitRepository(): Promise<string> {
   const repositoryRoot = await mkdtemp(path.join(os.tmpdir(), "nt-skillz-lint-huge-base-"))

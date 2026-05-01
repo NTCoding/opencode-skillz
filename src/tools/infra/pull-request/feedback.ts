@@ -5,8 +5,8 @@ import { z } from "zod"
 import type {
   CommandRunner,
   CommandRunResult,
-} from "./pull-request-files.js"
-import { childProcessCommandRunner } from "./pull-request-files.js"
+} from "../source-control/changed-files.js"
+import { childProcessCommandRunner } from "../source-control/changed-files.js"
 
 export const PULL_REQUEST_FEEDBACK_TOOL_NAME = "nt_skillz_pr_feedback"
 

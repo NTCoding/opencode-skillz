@@ -18,8 +18,6 @@ import {
 } from "../tools/pull-request-feedback-tool.js"
 import {
   VITEST_COVERAGE_TOOL_NAME,
-} from "../tools/vitest-coverage.js"
-import {
   vitestCoverageTool,
 } from "../tools/vitest-coverage-tool.js"
 import type {
@@ -28,7 +26,7 @@ import type {
 } from "../types.js"
 import { registerAgents } from "./agents.js"
 import { registerCommands } from "./commands.js"
-import { childProcessCommandRunner } from "../tools/pull-request-files.js"
+import { childProcessCommandRunner } from "../tools/infra/source-control/changed-files.js"
 
 function readLintedFilePaths(request: { files?: unknown }): string[] {
   if (!Array.isArray(request.files)) {

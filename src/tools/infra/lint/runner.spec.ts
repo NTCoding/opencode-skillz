@@ -5,7 +5,7 @@ import path from "node:path"
 import { spawnSync } from "node:child_process"
 
 import { describe, expect, it, vi } from "vitest"
-import { lintTool, prependLintFailureGuidance, runPortableLint, runPortableLintFromCommandLine } from "./lint.js"
+import { lintTool, prependLintFailureGuidance, runPortableLint, runPortableLintFromCommandLine } from "../../lint.js"
 
 interface LintToolContext {
   worktree: string

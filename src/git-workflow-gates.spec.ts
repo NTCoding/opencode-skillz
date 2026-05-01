@@ -3,7 +3,7 @@ import {
   createGitWorkflowGate,
   type CommandRunner,
   type CommandRunResult,
-} from "../git-workflow-gates.js"
+} from "./git-workflow-gates.js"
 
 interface CommandInvocation {
   executable: string

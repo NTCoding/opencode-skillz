@@ -3,9 +3,9 @@ import os from "node:os"
 import path from "node:path"
 
 import { describe, expect, it } from "vitest"
-import type { CommandRunner, CommandRunResult } from "../git-workflow-gates.js"
-import { createPullRequestToolWithRunner } from "./create-pr-tool.js"
-import { createPullRequestFeedbackTool } from "./pull-request-feedback-tool.js"
+import type { CommandRunner, CommandRunResult } from "../../../git-workflow-gates.js"
+import { createPullRequestToolWithRunner } from "../../create-pr-tool.js"
+import { createPullRequestFeedbackTool } from "../../pull-request-feedback-tool.js"
 
 interface ToolContext {
   worktree: string

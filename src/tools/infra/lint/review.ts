@@ -3,7 +3,7 @@ import process from "node:process"
 import {
   type CommandRunner,
   resolvePullRequestChangedFiles,
-} from "./pull-request-files.js"
+} from "../source-control/changed-files.js"
 
 export interface LintReviewRequest {
   repositoryRoot?: string

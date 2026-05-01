@@ -6,7 +6,7 @@ import {
   PULL_REQUEST_FEEDBACK_TOOL_NAME,
   readPullRequestFeedback,
   type PullRequestFeedbackDependencies,
-} from "./pull-request-feedback.js"
+} from "./infra/pull-request/feedback.js"
 
 export function createPullRequestFeedbackTool(dependencies: PullRequestFeedbackDependencies = {}): ToolDefinition {
   return tool({

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest"
 import type {
   CommandRunner,
   CommandRunResult,
-} from "../git-workflow-gates.js"
-import { createDraftPullRequest } from "./create-pr.js"
+} from "../../../git-workflow-gates.js"
+import { createDraftPullRequest } from "./create-draft-pull-request.js"
 
 interface CommandInvocation {
   executable: string

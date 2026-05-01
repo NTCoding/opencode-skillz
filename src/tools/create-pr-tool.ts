@@ -1,6 +1,6 @@
 import { tool, type ToolDefinition } from "@opencode-ai/plugin"
-import { createDraftPullRequest } from "./create-pr.js"
-import { childProcessCommandRunner } from "./pull-request-files.js"
+import { createDraftPullRequest } from "./infra/pull-request/create-draft-pull-request.js"
+import { childProcessCommandRunner } from "./infra/source-control/changed-files.js"
 import type { CommandRunner } from "../git-workflow-gates.js"
 
 export function createPullRequestToolWithRunner(commandRunner: CommandRunner): ToolDefinition {

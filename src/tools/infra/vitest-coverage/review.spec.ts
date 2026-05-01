@@ -4,9 +4,9 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import {
   runVitestCoverageReview,
-} from "./vitest-coverage.js"
-import { vitestCoverageTool } from "./vitest-coverage-tool.js"
-import type { CommandRunResult } from "./pull-request-files.js"
+} from "./review.js"
+import { vitestCoverageTool } from "../../vitest-coverage-tool.js"
+import type { CommandRunResult } from "../source-control/changed-files.js"
 import {
   type CapturedCoverageRun,
   createCoverageCommandRunner,
@@ -15,7 +15,7 @@ import {
   createRepositoryWithoutVitest,
   installFailingVitestBinary,
   removeDirectory,
-} from "./vitest-coverage-test-support.js"
+} from "./test-support.js"
 
 describe("runVitestCoverageReview", () => {
   it("returns no source files markdown when changed files are not coverable TypeScript sources", async () => {

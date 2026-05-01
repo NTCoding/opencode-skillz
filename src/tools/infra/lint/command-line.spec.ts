@@ -4,7 +4,7 @@ import path from "node:path"
 import { spawnSync } from "node:child_process"
 
 import { describe, expect, it } from "vitest"
-import { runPortableLintFromCommandLine } from "./lint.js"
+import { runPortableLintFromCommandLine } from "../../lint.js"
 
 async function createExtensionlessImportRepository(): Promise<string> {
   const repositoryRoot = await mkdtemp(path.join(os.tmpdir(), "nt-skillz-lint-cli-empty-output-"))

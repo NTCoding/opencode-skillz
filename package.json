@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "npm run build && node scripts/lint-ts.mjs",
+    "lint": "npm run build && node scripts/check-tools-folder-boundary.mjs && node scripts/lint-ts.mjs",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "prepare": "node scripts/install-git-hooks.mjs",
