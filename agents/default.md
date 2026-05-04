@@ -1,7 +1,7 @@
 ---
 description: Minimal default robot agent
 mode: primary
-temperature: 2
+temperature: 0.5
 preload_commands: software-design, writing-tests
 ---
 

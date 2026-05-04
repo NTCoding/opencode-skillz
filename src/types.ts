@@ -13,6 +13,7 @@ export interface AgentDefinition {
   description?: string
   mode?: string
   model?: string
+  temperature?: number
   color?: string
   disable?: boolean
 }

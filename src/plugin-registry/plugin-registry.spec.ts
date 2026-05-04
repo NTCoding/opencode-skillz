@@ -200,6 +200,7 @@ describe("registerAgents", () => {
         "description: Builder agent",
         "mode: primary",
         "model: provider/model",
+        "temperature: 0.2",
         "color: accent",
         "extends: base",
         "preload_commands: implement, review, missing",
@@ -213,6 +214,7 @@ describe("registerAgents", () => {
         description: "Builder agent",
         mode: "primary",
         model: "provider/model",
+        temperature: 0.2,
         color: "accent",
         prompt: [
           "Base prompt",
@@ -257,6 +259,83 @@ describe("registerAgents", () => {
         "Builder prompt",
         "[Preloaded command /implement]\nImplement work",
       ].join("\n\n"))
+    } finally {
+      removePluginRoot(pluginRoot)
+    }
+  })
+
+  it("does not inherit parent agent metadata", () => {
+    const pluginRoot = createPluginRoot()
+    const agentConfig: Record<string, AgentDefinition> = {}
+
+    try {
+      writePluginMarkdown(pluginRoot, "agents", "base.md", [
+        "---",
+        "description: Base agent",
+        "mode: primary",
+        "model: provider/base",
+        "temperature: 0.9",
+        "color: base",
+        "---",
+        "Base prompt",
+      ].join("\n"))
+      writePluginMarkdown(pluginRoot, "agents", "builder.md", [
+        "---",
+        "extends: base",
+        "temperature: 0.2",
+        "---",
+        "Builder prompt",
+      ].join("\n"))
+
+      registerAgents(agentConfig, pluginRoot, {})
+
+      expect(agentConfig.builder).toStrictEqual({
+        temperature: 0.2,
+        prompt: [
+          "Base prompt",
+          "Builder prompt",
+        ].join("\n\n"),
+      })
+    } finally {
+      removePluginRoot(pluginRoot)
+    }
+  })
+
+  it("ignores invalid agent temperature metadata", () => {
+    const pluginRoot = createPluginRoot()
+    const agentConfig: Record<string, AgentDefinition> = {}
+
+    try {
+      writePluginMarkdown(pluginRoot, "agents", "empty-temperature.md", [
+        "---",
+        "temperature:",
+        "---",
+        "Empty temperature prompt",
+      ].join("\n"))
+      writePluginMarkdown(pluginRoot, "agents", "text-temperature.md", [
+        "---",
+        "temperature: warm",
+        "---",
+        "Text temperature prompt",
+      ].join("\n"))
+      writePluginMarkdown(pluginRoot, "agents", "boolean-temperature.md", [
+        "---",
+        "temperature: true",
+        "---",
+        "Boolean temperature prompt",
+      ].join("\n"))
+
+      registerAgents(agentConfig, pluginRoot, {})
+
+      expect(agentConfig["empty-temperature"]).toStrictEqual({
+        prompt: "Empty temperature prompt",
+      })
+      expect(agentConfig["text-temperature"]).toStrictEqual({
+        prompt: "Text temperature prompt",
+      })
+      expect(agentConfig["boolean-temperature"]).toStrictEqual({
+        prompt: "Boolean temperature prompt",
+      })
     } finally {
       removePluginRoot(pluginRoot)
     }

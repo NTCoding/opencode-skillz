@@ -14,6 +14,16 @@ function materializePreloadedTemplate(template: string): string {
   return template.replaceAll("$ARGUMENTS", "all relevant current work in this session")
 }
 
+function parseOptionalNumber(value: unknown): number | undefined {
+  if (typeof value !== "string") return undefined
+
+  const trimmedValue = value.trim()
+  if (!trimmedValue) return undefined
+
+  const parsedValue = Number(trimmedValue)
+  return Number.isFinite(parsedValue) ? parsedValue : undefined
+}
+
 function getParentAgentName(rawAgent: { meta: Record<string, unknown> }): string {
   return typeof rawAgent.meta.extends === "string" ? rawAgent.meta.extends.trim() : ""
 }
@@ -48,6 +58,8 @@ function setOptionalAgentProperties(agent: AgentDefinition, meta: Record<string,
   if (typeof meta.description === "string") agent.description = meta.description
   if (typeof meta.mode === "string") agent.mode = meta.mode
   if (typeof meta.model === "string") agent.model = meta.model
+  const temperature = parseOptionalNumber(meta.temperature)
+  if (temperature !== undefined) agent.temperature = temperature
   if (typeof meta.color === "string") agent.color = meta.color
 }
 

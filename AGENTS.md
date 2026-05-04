@@ -74,8 +74,11 @@ Supported keys in `agents/*.md`:
 - `description` (optional)
 - `mode` (optional)
 - `model` (optional)
+- `temperature` (optional number)
 - `color` (optional)
 - `extends` (optional, agent name to prepend prompt from)
 - `preload_commands` (optional, comma-separated command names to embed in prompt)
+
+Agent `extends` composes prompt content and preloaded commands only. Agent frontmatter settings such as `description`, `mode`, `model`, `temperature`, and `color` are not inherited from parent agents.
 
 The markdown body becomes the command template or the agent prompt.
