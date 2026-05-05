@@ -69,7 +69,11 @@ function createPullRequestView() {
     baseRefName: "main",
     headRefName: "feature/pr-feedback",
     id: "PR_node_7",
+    mergeable: "MERGEABLE",
     number: 7,
+    reviewDecision: "APPROVED",
+    reviews: [],
+    statusCheckRollup: [],
     url: "https://github.com/acme/widgets/pull/7",
   }
 }
@@ -175,6 +179,65 @@ describe("readPullRequestFeedback", () => {
     } finally {
       removeRepository(repositoryRoot)
     }
+  })
+
+  it("reports mergeability, requested-change history, and failed checks", () => {
+    const commandRunner = createCommandRunner([
+      createSuccessfulCommandResult({
+        ...createPullRequestView(),
+        mergeable: "CONFLICTING",
+        reviewDecision: "CHANGES_REQUESTED",
+        reviews: [{
+          author: {
+            login: "reviewer",
+          },
+          state: "CHANGES_REQUESTED",
+          submittedAt: "2026-04-30T10:00:00Z",
+        }],
+        statusCheckRollup: [{
+          conclusion: "FAILURE",
+          detailsUrl: "https://github.com/acme/widgets/actions/runs/1",
+          name: "unit tests",
+          state: null,
+          status: "COMPLETED",
+          type: "CheckRun",
+        }, {
+          conclusion: "SUCCESS",
+          detailsUrl: "https://github.com/acme/widgets/actions/runs/2",
+          name: "lint",
+          state: null,
+          status: "COMPLETED",
+          type: "CheckRun",
+        }],
+      }),
+      createSuccessfulCommandResult(createReviewThreadResponse([], false, null)),
+    ], [])
+
+    const feedback = readPullRequestFeedback({
+      repositoryRoot: "/repo",
+      pullRequestNumber: "7",
+      pullRequestUrl: "https://github.com/acme/widgets/pull/7",
+    }, { commandRunner })
+
+    const expectedFeedbackFragments = [
+      "- Mergeable: CONFLICTING",
+      "- Review decision: CHANGES_REQUESTED",
+      "- Changes requested: yes",
+      "- Changes-requested review history: 1",
+      "### Changes-requested review 1",
+      "- Author: reviewer",
+      "- Failed checks: 1",
+      "### Failed check: unit tests",
+      "- Outcome: FAILURE",
+    ]
+
+    expect({
+      excludesPassingCheck: !feedback.includes("### Failed check: lint"),
+      includesExpectedFragments: expectedFeedbackFragments.map((feedbackFragment) => feedback.includes(feedbackFragment)),
+    }).toStrictEqual({
+      excludesPassingCheck: true,
+      includesExpectedFragments: expectedFeedbackFragments.map(() => true),
+    })
   })
 
   it("fetches the next review thread page when GitHub returns a thread cursor", () => {

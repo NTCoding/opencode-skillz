@@ -7,6 +7,13 @@ import type {
   CommandRunResult,
 } from "../source-control/changed-files.js"
 import { childProcessCommandRunner } from "../source-control/changed-files.js"
+import {
+  createPullRequestViewJqFilter,
+  formatPullRequestStateDetails,
+  formatPullRequestStateSummary,
+  pullRequestReviewSchema,
+  statusCheckRollupItemSchema,
+} from "./feedback-state.js"
 
 export const PULL_REQUEST_FEEDBACK_TOOL_NAME = "nt_skillz_pr_feedback"
 
@@ -14,7 +21,11 @@ const pullRequestViewSchema = z.object({
   baseRefName: z.string(),
   headRefName: z.string(),
   id: z.string().min(1),
+  mergeable: z.string().nullable(),
   number: z.number().int(),
+  reviewDecision: z.string().nullable(),
+  reviews: z.array(pullRequestReviewSchema),
+  statusCheckRollup: z.array(statusCheckRollupItemSchema),
   url: z.string().min(1),
 })
 
@@ -128,9 +139,9 @@ function readPullRequestView(
     "view",
     pullRequestNumber,
     "--json",
-    "id,number,url,headRefName,baseRefName",
+    "id,number,url,headRefName,baseRefName,mergeable,reviewDecision,reviews,statusCheckRollup",
     "--jq",
-    ".",
+    createPullRequestViewJqFilter(),
   ], repositoryRoot)
 
   ensureSuccessfulCommand(commandResult, "GitHub pull request lookup")
@@ -181,6 +192,8 @@ function readReviewThreadPage(
     `pullRequestId=${pullRequestId}`,
     "-f",
     `query=${createReviewThreadsQuery()}`,
+    "--jq",
+    ".data",
   ]
 
   if (threadCursor) {
@@ -378,7 +391,9 @@ export function readPullRequestFeedback(
     `- PR URL: ${pullRequestView.url}`,
     `- Head branch: ${pullRequestView.headRefName}`,
     `- Base branch: ${pullRequestView.baseRefName}`,
+    ...formatPullRequestStateSummary(pullRequestView),
     `- Unresolved review threads: ${unresolvedReviewThreads.length}`,
+    ...formatPullRequestStateDetails(pullRequestView),
     "",
     ...unresolvedReviewThreads.map((reviewThread) => formatReviewThread(request.repositoryRoot, reviewThread)),
   ].join("\n")

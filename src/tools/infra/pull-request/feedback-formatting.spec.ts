@@ -51,7 +51,11 @@ function createPullRequestView() {
     baseRefName: "main",
     headRefName: "feature/pr-feedback",
     id: "PR_node_7",
+    mergeable: "MERGEABLE",
     number: 7,
+    reviewDecision: "APPROVED",
+    reviews: [],
+    statusCheckRollup: [],
     url: "https://github.com/acme/widgets/pull/7",
   }
 }

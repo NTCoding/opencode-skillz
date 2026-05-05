@@ -69,7 +69,11 @@ function createPullRequestView() {
     baseRefName: "main",
     headRefName: "feature/pr-feedback",
     id: "PR_node_7",
+    mergeable: "MERGEABLE",
     number: 7,
+    reviewDecision: "APPROVED",
+    reviews: [],
+    statusCheckRollup: [],
     url: "https://github.com/acme/widgets/pull/7",
   }
 }
@@ -110,6 +114,33 @@ function createReviewThreadResponse(reviewThreads: unknown[]) {
       },
     },
   }
+}
+
+function expectedPullRequestViewJqFilter(): string {
+  return [
+    "{",
+    "  baseRefName,",
+    "  headRefName,",
+    "  id,",
+    "  mergeable,",
+    "  number,",
+    "  reviewDecision,",
+    "  reviews: [.reviews[]? | {",
+    "    author: { login: (.author.login // \"unknown\") },",
+    "    state,",
+    "    submittedAt",
+    "  }],",
+    "  statusCheckRollup: [.statusCheckRollup[]? | {",
+    "    conclusion: (.conclusion // null),",
+    "    detailsUrl: (.detailsUrl // .targetUrl // \"\"),",
+    "    name: (.name // .context // .workflowName // \"unknown\"),",
+    "    state: (.state // null),",
+    "    status: (.status // null),",
+    "    type: (.__typename // \"unknown\")",
+    "  }],",
+    "  url",
+    "}",
+  ].join("\n")
 }
 
 function expectedReviewThreadsQuery(): string {
@@ -163,11 +194,19 @@ describe("readPullRequestFeedback validation", () => {
 
       expect(commandInvocations).toStrictEqual([{
         executable: "gh",
-        commandArguments: ["pr", "view", "7", "--json", "id,number,url,headRefName,baseRefName", "--jq", "."],
+        commandArguments: [
+          "pr",
+          "view",
+          "7",
+          "--json",
+          "id,number,url,headRefName,baseRefName,mergeable,reviewDecision,reviews,statusCheckRollup",
+          "--jq",
+          expectedPullRequestViewJqFilter(),
+        ],
         workingDirectory: repositoryRoot,
       }, {
         executable: "gh",
-        commandArguments: ["api", "graphql", "-f", "pullRequestId=PR_node_7", "-f", `query=${expectedReviewThreadsQuery()}`],
+        commandArguments: ["api", "graphql", "-f", "pullRequestId=PR_node_7", "-f", `query=${expectedReviewThreadsQuery()}`, "--jq", ".data"],
         workingDirectory: repositoryRoot,
       }])
     } finally {
