@@ -144,4 +144,38 @@ describe("createPluginRegistry lint tool", () => {
       removePluginRoot(pluginRoot)
     }
   }, 20_000)
+
+  it("makes lint available without enforcing it in manual mode", async () => {
+    const repositoryRoot = createLintRepository()
+    const pluginRoot = createPluginRoot()
+    const registry = createPluginRegistry({
+      client: createClient(),
+      worktree: repositoryRoot,
+    }, pluginRoot, {
+      lint: {
+        mode: "manual",
+      },
+    })
+    const lintToolDefinition = registry.tool?.[LINT_TOOL_NAME]
+    const toolExecutionBeforeHook = registry["tool.execute.before"]
+
+    try {
+      if (!lintToolDefinition?.execute) throw new MissingRegistryToolError()
+      if (!toolExecutionBeforeHook) throw new MissingToolExecutionBeforeHookError()
+
+      fs.appendFileSync(path.join(repositoryRoot, "src", "command.ts"), "\nexport const changedCommandName = \"changed\"\n")
+      runGit(repositoryRoot, ["add", "src/command.ts"])
+
+      await expect(toolExecutionBeforeHook({
+        tool: "bash",
+      }, {
+        args: {
+          command: "git commit -m 'feat(test): change command'",
+        },
+      })).resolves.toBeUndefined()
+    } finally {
+      removePluginRoot(repositoryRoot)
+      removePluginRoot(pluginRoot)
+    }
+  })
 })

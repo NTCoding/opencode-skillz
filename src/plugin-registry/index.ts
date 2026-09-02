@@ -23,6 +23,7 @@ import {
 import type {
   PluginHooks,
   PluginInput,
+  PluginOptions,
 } from "../types.js"
 import { registerAgents } from "./agents.js"
 import { registerCommands } from "./commands.js"
@@ -36,6 +37,28 @@ function readLintedFilePaths(request: { files?: unknown }): string[] {
   return request.files.filter((filePath) => typeof filePath === "string")
 }
 
+export type LintMode = "auto" | "manual" | "disabled"
+
+class InvalidLintModeError extends Error {
+  constructor(mode: unknown) {
+    super(`Expected lint.mode to be 'auto', 'manual', or 'disabled'. Got ${String(mode)}.`)
+  }
+}
+
+function resolveLintMode(options: PluginOptions | undefined): LintMode {
+  const mode = options?.lint?.mode
+
+  if (mode === undefined) {
+    return "auto"
+  }
+
+  if (mode === "auto" || mode === "manual" || mode === "disabled") {
+    return mode
+  }
+
+  throw new InvalidLintModeError(mode)
+}
+
 function createGateAwareLintTool(gate: GitWorkflowGate): typeof lintTool {
   return {
     ...lintTool,
@@ -47,18 +70,32 @@ function createGateAwareLintTool(gate: GitWorkflowGate): typeof lintTool {
   }
 }
 
-export function createPluginRegistry(input: PluginInput, pluginRoot: string): PluginHooks {
+export function createPluginRegistry(
+  input: PluginInput,
+  pluginRoot: string,
+  options?: PluginOptions,
+): PluginHooks {
+  const lintMode = resolveLintMode(options)
   const dontStopHooks = createDontStopHooks(input.client)
-  const gitWorkflowGate = createGitWorkflowGate(input.worktree ?? process.cwd(), childProcessCommandRunner)
+  const gitWorkflowGate = createGitWorkflowGate(
+    input.worktree ?? process.cwd(),
+    childProcessCommandRunner,
+    lintMode === "auto",
+  )
+
+  const tools: NonNullable<PluginHooks["tool"]> = {
+    nt_skillz_create_pr: createPullRequestTool,
+    [PULL_REQUEST_FEEDBACK_TOOL_NAME]: pullRequestFeedbackTool,
+    [VITEST_COVERAGE_TOOL_NAME]: vitestCoverageTool,
+  }
+
+  if (lintMode !== "disabled") {
+    tools[LINT_TOOL_NAME] = lintMode === "auto" ? createGateAwareLintTool(gitWorkflowGate) : lintTool
+  }
 
   return {
     ...dontStopHooks,
-    tool: {
-      nt_skillz_create_pr: createPullRequestTool,
-      [LINT_TOOL_NAME]: createGateAwareLintTool(gitWorkflowGate),
-      [PULL_REQUEST_FEEDBACK_TOOL_NAME]: pullRequestFeedbackTool,
-      [VITEST_COVERAGE_TOOL_NAME]: vitestCoverageTool,
-    },
+    tool: tools,
     "tool.execute.before": async (hookInput, hookOutput) => {
       gitWorkflowGate.beforeToolExecution(hookInput, hookOutput)
     },
