@@ -24,6 +24,12 @@ export interface PluginConfig {
   default_agent?: string
 }
 
+export interface PluginOptions {
+  lint?: {
+    mode?: unknown
+  }
+}
+
 export interface CommandExecuteBeforeInput {
   command: string
   sessionID: string

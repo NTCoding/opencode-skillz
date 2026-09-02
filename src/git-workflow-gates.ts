@@ -87,7 +87,11 @@ function createUnlintedCommitMessage(filePaths: string[]): string {
   ].join("\n")
 }
 
-export function createGitWorkflowGate(repositoryRoot: string, commandRunner: CommandRunner): GitWorkflowGate {
+export function createGitWorkflowGate(
+  repositoryRoot: string,
+  commandRunner: CommandRunner,
+  requireLintBeforeCommit = true,
+): GitWorkflowGate {
   const lintedFingerprints = new Map<string, string>()
 
   function runGit(commandArguments: string[], description: string): string {
@@ -117,6 +121,10 @@ export function createGitWorkflowGate(repositoryRoot: string, commandRunner: Com
   }
 
   function ensureStagedTypeScriptFilesAreLinted(): void {
+    if (!requireLintBeforeCommit) {
+      return
+    }
+
     const stagedFilePaths = readStagedTypeScriptFilePaths()
     const unlintedFilePaths = stagedFilePaths.filter((filePath) => lintedFingerprints.get(filePath) !== readStagedFingerprint(filePath))
 

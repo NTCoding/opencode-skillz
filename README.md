@@ -17,6 +17,32 @@ Add the package name to the plugin list:
 
 This is the simplest update path for consumers: declare the plugin once and keep your package pinning strategy up to date.
 
+### Lint mode
+
+`lint.mode` controls the bundled `nt_skillz_lint` tool and its commit gate. It defaults to `"auto"`.
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    [
+      "@nt-ai-lab/opencode-skillz",
+      {
+        "lint": {
+          "mode": "manual"
+        }
+      }
+    ]
+  ]
+}
+```
+
+- `"auto"`: provides the lint tool and requires it before committing changed TypeScript files.
+- `"manual"`: provides the lint tool without the commit requirement.
+- `"disabled"`: does not provide the lint tool or the lint commit requirement.
+
+An unsupported mode prevents the plugin from starting and reports the accepted values.
+
 ### Option B: local typed wrapper plugin file
 
 If a consumer prefers local TypeScript wiring, create a file in `.opencode/plugins/`:
