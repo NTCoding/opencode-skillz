@@ -2,6 +2,10 @@
   "name": "@nt-ai-lab/opencode-skillz",
   "version": "0.4.5",
   "description": "Bundled OpenCode commands and agents",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NTCoding/opencode-skillz.git"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
