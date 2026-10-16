@@ -1,6 +1,6 @@
 {
   "name": "@nt-ai-lab/opencode-skillz",
-  "version": "0.4.11",
+  "version": "0.4.12",
   "description": "Bundled OpenCode commands and agents",
   "repository": {
     "type": "git",
